@@ -1,5 +1,5 @@
--- RYZEN AIMBOT + ESP НА RAYFIELD
--- ДЛЯ DELTA И ДРУГИХ ИСПОЛНИТЕЛЕЙ
+-- RYZEN AIMBOT + ULTRA ESP НА RAYFIELD
+-- ФИОЛЕТОВАЯ ТЕМА + FPS BOOST
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -8,6 +8,21 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local Debris = game:GetService("Debris")
+
+-- ============================================
+-- ФИОЛЕТОВАЯ ТЕМА RAYFIELD
+-- ============================================
+local PurpleTheme = {
+    Background = Color3.fromRGB(20, 10, 30),
+    Glow = Color3.fromRGB(120, 50, 200),
+    Accent = Color3.fromRGB(150, 60, 220),
+    Light = Color3.fromRGB(180, 100, 240),
+    Dark = Color3.fromRGB(15, 5, 25),
+    Text = Color3.fromRGB(220, 180, 255),
+    Border = Color3.fromRGB(130, 60, 200)
+}
 
 -- НАСТРОЙКИ
 local Settings = {
@@ -17,7 +32,9 @@ local Settings = {
         Smoothness = 0.3,
         TargetPart = "Head",
         TeamCheck = false,
-        WallCheck = false
+        WallCheck = false,
+        ShowFOV = false,
+        FOVColor = Color3.fromRGB(255, 0, 255)
     },
     ESP = {
         Enabled = false,
@@ -25,20 +42,34 @@ local Settings = {
         Tracers = false,
         Health = false,
         Distance = false,
-        TeamColor = false
+        TeamColor = false,
+        StatsBox = false,
+        Rainbow = false
+    },
+    Crosshair = {
+        Enabled = false,
+        Style = "Классический",
+        Color = Color3.fromRGB(0, 255, 0),
+        Size = 20,
+        Thickness = 2
+    },
+    FPSBoost = {
+        RemoveParticles = false,
+        GrayTextures = false,
+        GraySky = false
     }
 }
 
--- СОЗДАНИЕ ОКНА
+-- СОЗДАНИЕ ОКНА RAYFIELD
 local Window = Rayfield:CreateWindow({
-    Name = "🤑 Ryzen Aimbot",
+    Name = "🤑 Ryzen Aimbot Ultra",
     Icon = 0,
     LoadingTitle = "Ryzen System",
-    LoadingSubtitle = "by archeee-create",
+    LoadingSubtitle = "Purple Edition",
     Theme = "Dark",
     ConfigurationSaving = {
         Enabled = true,
-        FileName = "RyzenAimbot"
+        FileName = "RyzenUltra"
     }
 })
 
@@ -47,7 +78,7 @@ local Window = Rayfield:CreateWindow({
 -- ============================================
 local AimbotTab = Window:CreateTab("🎯 Aimbot", 0)
 
-local AimbotSection = AimbotTab:CreateSection("Настройки аимбота")
+AimbotTab:CreateSection("Настройки аимбота")
 
 AimbotTab:CreateToggle({
     Name = "Aimbot",
@@ -70,6 +101,14 @@ AimbotTab:CreateToggle({
     CurrentValue = false,
     Callback = function(Value)
         Settings.AimBot.TeamCheck = Value
+    end
+})
+
+AimbotTab:CreateToggle({
+    Name = "Show FOV (визуализация)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AimBot.ShowFOV = Value
     end
 })
 
@@ -98,11 +137,206 @@ AimbotTab:CreateDropdown({
 })
 
 -- ============================================
+-- ВКЛАДКА "CROSSHAIR" (ПРИЦЕЛ)
+-- ============================================
+local CrosshairTab = Window:CreateTab("🎯 Crosshair", 0)
+
+CrosshairTab:CreateSection("Настройки прицела")
+
+CrosshairTab:CreateToggle({
+    Name = "Включить прицел",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.Crosshair.Enabled = Value
+    end
+})
+
+CrosshairTab:CreateDropdown({
+    Name = "Стиль прицела",
+    Options = {"Классический", "Точка", "Круг", "Крест", "X", "Стрелка", "Ромб"},
+    CurrentOption = "Классический",
+    Callback = function(Option)
+        Settings.Crosshair.Style = Option
+    end
+})
+
+CrosshairTab:CreateSlider({
+    Name = "Размер прицела",
+    Range = {5, 50},
+    Increment = 1,
+    Suffix = "px",
+    CurrentValue = 20,
+    Callback = function(Value)
+        Settings.Crosshair.Size = Value
+    end
+})
+
+CrosshairTab:CreateSlider({
+    Name = "Толщина прицела",
+    Range = {1, 5},
+    Increment = 1,
+    Suffix = "px",
+    CurrentValue = 2,
+    Callback = function(Value)
+        Settings.Crosshair.Thickness = Value
+    end
+})
+
+-- ============================================
+-- ВКЛАДКА "CROSSHAIR COLOR"
+-- ============================================
+local CrosshairColorTab = Window:CreateTab("🎨 Crosshair Color", 0)
+
+CrosshairColorTab:CreateSection("Выберите цвет прицела")
+
+local crosshairColors = {
+    {"Зелёный", Color3.fromRGB(0, 255, 0)},
+    {"Красный", Color3.fromRGB(255, 0, 0)},
+    {"Синий", Color3.fromRGB(0, 0, 255)},
+    {"Жёлтый", Color3.fromRGB(255, 255, 0)},
+    {"Фиолетовый", Color3.fromRGB(255, 0, 255)},
+    {"Голубой", Color3.fromRGB(0, 255, 255)},
+    {"Оранжевый", Color3.fromRGB(255, 165, 0)},
+    {"Розовый", Color3.fromRGB(255, 105, 180)},
+    {"Белый", Color3.fromRGB(255, 255, 255)},
+    {"Чёрный", Color3.fromRGB(0, 0, 0)}
+}
+
+for _, colorData in ipairs(crosshairColors) do
+    local colorName = colorData[1]
+    local colorValue = colorData[2]
+    
+    CrosshairColorTab:CreateButton({
+        Name = colorName .. " ●",
+        Callback = function()
+            Settings.Crosshair.Color = colorValue
+            Rayfield:Notify({
+                Title = "Цвет прицела",
+                Content = "Выбран: " .. colorName,
+                Duration = 1.5
+            })
+        end
+    })
+end
+
+-- ============================================
+-- ВКЛАДКА "FOV COLOR"
+-- ============================================
+local FOVColorTab = Window:CreateTab("🎨 FOV Color", 0)
+
+FOVColorTab:CreateSection("Выберите цвет для FOV")
+
+local fovColors = {
+    {"Красный", Color3.fromRGB(255, 0, 0)},
+    {"Зелёный", Color3.fromRGB(0, 255, 0)},
+    {"Синий", Color3.fromRGB(0, 0, 255)},
+    {"Жёлтый", Color3.fromRGB(255, 255, 0)},
+    {"Фиолетовый", Color3.fromRGB(255, 0, 255)},
+    {"Голубой", Color3.fromRGB(0, 255, 255)},
+    {"Оранжевый", Color3.fromRGB(255, 165, 0)},
+    {"Розовый", Color3.fromRGB(255, 105, 180)},
+    {"Белый", Color3.fromRGB(255, 255, 255)}
+}
+
+for _, colorData in ipairs(fovColors) do
+    local colorName = colorData[1]
+    local colorValue = colorData[2]
+    
+    FOVColorTab:CreateButton({
+        Name = colorName .. " ●",
+        Callback = function()
+            Settings.AimBot.FOVColor = colorValue
+            Rayfield:Notify({
+                Title = "Цвет FOV",
+                Content = "Выбран: " .. colorName,
+                Duration = 1.5
+            })
+        end
+    })
+end
+
+-- ============================================
+-- ВКЛАДКА "FPS BOOST"
+-- ============================================
+local FPSBoostTab = Window:CreateTab("⚡ FPS Boost", 0)
+
+FPSBoostTab:CreateSection("Оптимизация производительности")
+
+FPSBoostTab:CreateToggle({
+    Name = "Убрать кастомные частицы",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.FPSBoost.RemoveParticles = Value
+        if Value then
+            removeParticles()
+            Rayfield:Notify({
+                Title = "FPS Boost",
+                Content = "Частицы удалены!",
+                Duration = 1.5
+            })
+        else
+            restoreParticles()
+            Rayfield:Notify({
+                Title = "FPS Boost",
+                Content = "Частицы восстановлены!",
+                Duration = 1.5
+            })
+        end
+    end
+})
+
+FPSBoostTab:CreateToggle({
+    Name = "Сделать текстуры серыми",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.FPSBoost.GrayTextures = Value
+        if Value then
+            makeTexturesGray()
+            Rayfield:Notify({
+                Title = "FPS Boost",
+                Content = "Текстуры обесцвечены!",
+                Duration = 1.5
+            })
+        else
+            restoreTextures()
+            Rayfield:Notify({
+                Title = "FPS Boost",
+                Content = "Текстуры восстановлены!",
+                Duration = 1.5
+            })
+        end
+    end
+})
+
+FPSBoostTab:CreateToggle({
+    Name = "Сделать небо серым",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.FPSBoost.GraySky = Value
+        if Value then
+            makeSkyGray()
+            Rayfield:Notify({
+                Title = "FPS Boost",
+                Content = "Небо стало серым!",
+                Duration = 1.5
+            })
+        else
+            restoreSky()
+            Rayfield:Notify({
+                Title = "FPS Boost",
+                Content = "Небо восстановлено!",
+                Duration = 1.5
+            })
+        end
+    end
+})
+
+-- ============================================
 -- ВКЛАДКА ESP
 -- ============================================
 local ESPTab = Window:CreateTab("👁️ ESP", 0)
 
-local ESPSection = ESPTab:CreateSection("Настройки ESP")
+ESPTab:CreateSection("Основные настройки")
 
 ESPTab:CreateToggle({
     Name = "ESP Total",
@@ -113,7 +347,17 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "Box ESP",
+    Name = "🌈 Rainbow ESP",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Rainbow = Value
+    end
+})
+
+ESPTab:CreateSection("Боксы")
+
+ESPTab:CreateToggle({
+    Name = "📦 Box ESP (рамка)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Box = Value
@@ -121,15 +365,27 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "Tracers (линии)",
+    Name = "📊 Stats Box (статистика)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.StatsBox = Value
+    end
+})
+
+ESPTab:CreateSection("Линии")
+
+ESPTab:CreateToggle({
+    Name = "📏 Tracers (линии)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Tracers = Value
     end
 })
 
+ESPTab:CreateSection("Информация")
+
 ESPTab:CreateToggle({
-    Name = "Health Bar",
+    Name = "❤️ Health Bar",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Health = Value
@@ -137,7 +393,7 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "Distance (дистанция)",
+    Name = "📏 Distance",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Distance = Value
@@ -145,7 +401,7 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "Team Colors (цвет команды)",
+    Name = "🎨 Team Colors",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.TeamColor = Value
@@ -157,7 +413,7 @@ ESPTab:CreateToggle({
 -- ============================================
 local ControlTab = Window:CreateTab("⚙️ Управление", 0)
 
-local ControlSection = ControlTab:CreateSection("Управление скриптом")
+ControlTab:CreateSection("Управление скриптом")
 
 ControlTab:CreateButton({
     Name = "OFF ALL (отключить всё)",
@@ -165,12 +421,22 @@ ControlTab:CreateButton({
         Settings.AimBot.Enabled = false
         Settings.AimBot.WallCheck = false
         Settings.AimBot.TeamCheck = false
+        Settings.AimBot.ShowFOV = false
         Settings.ESP.Enabled = false
         Settings.ESP.Box = false
         Settings.ESP.Tracers = false
         Settings.ESP.Health = false
         Settings.ESP.Distance = false
         Settings.ESP.TeamColor = false
+        Settings.ESP.StatsBox = false
+        Settings.ESP.Rainbow = false
+        Settings.Crosshair.Enabled = false
+        Settings.FPSBoost.RemoveParticles = false
+        Settings.FPSBoost.GrayTextures = false
+        Settings.FPSBoost.GraySky = false
+        restoreParticles()
+        restoreTextures()
+        restoreSky()
         Rayfield:Notify({
             Title = "Ryzen System",
             Content = "Все функции отключены!",
@@ -182,6 +448,9 @@ ControlTab:CreateButton({
 ControlTab:CreateButton({
     Name = "!DESTROY! (удалить скрипт)",
     Callback = function()
+        restoreParticles()
+        restoreTextures()
+        restoreSky()
         Rayfield:Destroy()
         for _, v in pairs(game.CoreGui:GetChildren()) do
             if v.Name == "Rayfield" or v.Name == "RyzenMobile" then
@@ -192,10 +461,101 @@ ControlTab:CreateButton({
 })
 
 -- ============================================
--- ОСНОВНАЯ ЛОГИКА (AIMBOT + ESP)
+-- ФУНКЦИИ FPS BOOST
 -- ============================================
 
+local originalSky = nil
+local originalTextures = {}
+local particlesList = {}
+
+-- СОХРАНЯЕМ ОРИГИНАЛЬНЫЕ ТЕКСТУРЫ
+local function saveOriginalTextures()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
+            table.insert(originalTextures, {obj = v, mat = v.Material})
+        end
+    end
+end
+
+-- УДАЛЕНИЕ ЧАСТИЦ
+local function removeParticles()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+            table.insert(particlesList, v)
+            v.Enabled = false
+            v.Parent = nil
+        end
+    end
+end
+
+local function restoreParticles()
+    for _, v in pairs(particlesList) do
+        if v then
+            v.Enabled = true
+            v.Parent = workspace
+        end
+    end
+    particlesList = {}
+end
+
+-- СЕРЫЕ ТЕКСТУРЫ
+local function makeTexturesGray()
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
+            table.insert(originalTextures, {obj = v, mat = v.Material})
+            v.Material = Enum.Material.Plastic
+            v.Color = Color3.fromRGB(128, 128, 128)
+        end
+        if v:IsA("Decal") or v:IsA("Texture") then
+            v.Transparency = 1
+        end
+    end
+end
+
+local function restoreTextures()
+    for _, data in pairs(originalTextures) do
+        if data.obj and data.obj.Parent then
+            data.obj.Material = data.mat
+            data.obj.Color = Color3.fromRGB(255, 255, 255)
+        end
+    end
+    originalTextures = {}
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Decal") or v:IsA("Texture") then
+            v.Transparency = 0
+        end
+    end
+end
+
+-- СЕРОЕ НЕБО
+local function makeSkyGray()
+    originalSky = Lighting.Sky
+    local newSky = Instance.new("Sky")
+    newSky.SkyboxBk = "rbxassetid://1382515588"
+    newSky.SkyboxDn = "rbxassetid://1382515588"
+    newSky.SkyboxFt = "rbxassetid://1382515588"
+    newSky.SkyboxLf = "rbxassetid://1382515588"
+    newSky.SkyboxRt = "rbxassetid://1382515588"
+    newSky.SkyboxUp = "rbxassetid://1382515588"
+    newSky.Parent = Lighting
+    Lighting.Sky = newSky
+end
+
+local function restoreSky()
+    if originalSky then
+        Lighting.Sky = originalSky
+    else
+        Lighting.Sky:Destroy()
+        local newSky = Instance.new("Sky")
+        newSky.Parent = Lighting
+        Lighting.Sky = newSky
+    end
+end
+
+-- ============================================
 -- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+-- ============================================
+
 local function isAlive(plr)
     local char = plr.Character
     return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0
@@ -206,6 +566,13 @@ local function getTeamColor(plr)
         return plr.Team.TeamColor.Color
     end
     return Color3.new(1, 1, 1)
+end
+
+local function getTeamName(plr)
+    if plr.Team and plr.Team.Name then
+        return plr.Team.Name
+    end
+    return "No Team"
 end
 
 local function getPart(plr, partName)
@@ -222,7 +589,17 @@ local function isVisible(origin, targetPos)
     return true
 end
 
+local function getRainbowColor(time)
+    local r = math.sin(time) * 0.5 + 0.5
+    local g = math.sin(time + 2.094) * 0.5 + 0.5
+    local b = math.sin(time + 4.188) * 0.5 + 0.5
+    return Color3.new(r, g, b)
+end
+
+-- ============================================
 -- AIMBOT
+-- ============================================
+
 local function getClosestPlayerInFOV()
     if not Settings.AimBot.Enabled then return nil end
     
@@ -276,115 +653,83 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP
-local drawingObjects = {}
+-- ============================================
+-- FOV ВИЗУАЛИЗАЦИЯ
+-- ============================================
+local fovCircle = nil
 
-local function clearDrawings()
-    for _, obj in pairs(drawingObjects) do
+local function drawFOV()
+    if not Settings.AimBot.ShowFOV then
+        if fovCircle then
+            fovCircle:Remove()
+            fovCircle = nil
+        end
+        return
+    end
+    
+    if not fovCircle then
+        fovCircle = Drawing.new("Circle")
+        fovCircle.Thickness = 2
+        fovCircle.NumSides = 60
+        fovCircle.Filled = false
+    end
+    
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local radius = (Settings.AimBot.FOV / 2) * (Camera.ViewportSize.X / 100)
+    
+    fovCircle.Position = center
+    fovCircle.Radius = radius
+    fovCircle.Color = Settings.AimBot.FOVColor
+    fovCircle.Visible = true
+end
+
+RunService.RenderStepped:Connect(drawFOV)
+
+-- ============================================
+-- РИСОВАНИЕ ПРИЦЕЛА
+-- ============================================
+local crosshairObjects = {}
+
+local function clearCrosshair()
+    for _, obj in pairs(crosshairObjects) do
         if obj and obj.Remove then
             obj:Remove()
         end
     end
-    drawingObjects = {}
+    crosshairObjects = {}
 end
 
-local function createDrawing(type, props)
+local function createCrosshairObject(type, props)
     local obj = Drawing.new(type)
     for k, v in pairs(props) do
         obj[k] = v
     end
-    table.insert(drawingObjects, obj)
+    table.insert(crosshairObjects, obj)
     return obj
 end
 
-RunService.RenderStepped:Connect(function()
-    clearDrawings()
+local function drawCrosshair()
+    clearCrosshair()
     
-    if not Settings.ESP.Enabled then return end
+    if not Settings.Crosshair.Enabled then return end
+    
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local size = Settings.Crosshair.Size
+    local thick = Settings.Crosshair.Thickness
+    local color = Settings.Crosshair.Color
+    local style = Settings.Crosshair.Style
+    
+    if style == "Классический" then
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X - size, center.Y),
+            To = Vector2.new(center.X - thick/2, center.Y),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X + thick/2, center.Y),
+            To = Vector2.new(center.X + size, center.Y),
+            Thickness = thick,
+            Color = color,
 
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr == LocalPlayer then continue end
-        if not isAlive(plr) then continue end
-
-        local char = plr.Character
-        local head = char:FindFirstChild("Head")
-        if not head then continue end
-
-        local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-        if not onScreen then continue end
-
-        local teamCol = getTeamColor(plr)
-        local espColor = Settings.ESP.TeamColor and teamCol or Color3.new(1, 1, 1)
-
-        if Settings.ESP.Box then
-            local root = char:FindFirstChild("HumanoidRootPart")
-            if root then
-                local bottomPos, _ = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
-                local topPos, _ = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
-                local height = topPos.Y - bottomPos.Y
-                local width = height * 0.4
-                local x = headPos.X - width/2
-                local y = headPos.Y
-
-                createDrawing("Square", {
-                    Position = Vector2.new(x, y),
-                    Size = Vector2.new(width, height),
-                    Thickness = 2,
-                    Color = espColor,
-                    Filled = false,
-                    Visible = true
-                })
-            end
-        end
-
-        if Settings.ESP.Tracers then
-            local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-            createDrawing("Line", {
-                From = center,
-                To = Vector2.new(headPos.X, headPos.Y),
-                Thickness = 2,
-                Color = espColor,
-                Visible = true
-            })
-        end
-
-        if Settings.ESP.Health then
-            local hum = char:FindFirstChild("Humanoid")
-            if hum then
-                local healthPercent = hum.Health / hum.MaxHealth
-                local barWidth = 40
-                local barX = headPos.X - barWidth/2
-                local barY = headPos.Y - 35
-                
-                createDrawing("Line", {
-                    From = Vector2.new(barX, barY),
-                    To = Vector2.new(barX + barWidth, barY),
-                    Thickness = 4,
-                    Color = Color3.new(0.2, 0.2, 0.2),
-                    Visible = true
-                })
-                createDrawing("Line", {
-                    From = Vector2.new(barX, barY),
-                    To = Vector2.new(barX + barWidth * healthPercent, barY),
-                    Thickness = 4,
-                    Color = Color3.new(1 - healthPercent, healthPercent, 0),
-                    Visible = true
-                })
-            end
-        end
-
-        if Settings.ESP.Distance then
-            local dist = math.floor((Camera.CFrame.Position - head.Position).Magnitude)
-            createDrawing("Text", {
-                Position = Vector2.new(headPos.X, headPos.Y + 30),
-                Text = dist .. "m",
-                Size = 14,
-                Color = Color3.new(1, 1, 1),
-                Center = true,
-                Visible = true
-            })
-        end
-    end
-end)
-
-game:GetService("BindableEvent").Destroying:Connect(clearDrawings)
