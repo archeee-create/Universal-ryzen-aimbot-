@@ -9,20 +9,6 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
-local Debris = game:GetService("Debris")
-
--- ============================================
--- ФИОЛЕТОВАЯ ТЕМА RAYFIELD
--- ============================================
-local PurpleTheme = {
-    Background = Color3.fromRGB(20, 10, 30),
-    Glow = Color3.fromRGB(120, 50, 200),
-    Accent = Color3.fromRGB(150, 60, 220),
-    Light = Color3.fromRGB(180, 100, 240),
-    Dark = Color3.fromRGB(15, 5, 25),
-    Text = Color3.fromRGB(220, 180, 255),
-    Border = Color3.fromRGB(130, 60, 200)
-}
 
 -- НАСТРОЙКИ
 local Settings = {
@@ -137,7 +123,7 @@ AimbotTab:CreateDropdown({
 })
 
 -- ============================================
--- ВКЛАДКА "CROSSHAIR" (ПРИЦЕЛ)
+-- ВКЛАДКА "CROSSHAIR"
 -- ============================================
 local CrosshairTab = Window:CreateTab("🎯 Crosshair", 0)
 
@@ -262,20 +248,36 @@ local FPSBoostTab = Window:CreateTab("⚡ FPS Boost", 0)
 
 FPSBoostTab:CreateSection("Оптимизация производительности")
 
+local particlesList = {}
+local originalTextures = {}
+local originalSky = nil
+
 FPSBoostTab:CreateToggle({
     Name = "Убрать кастомные частицы",
     CurrentValue = false,
     Callback = function(Value)
         Settings.FPSBoost.RemoveParticles = Value
         if Value then
-            removeParticles()
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
+                    table.insert(particlesList, v)
+                    v.Enabled = false
+                    v.Parent = nil
+                end
+            end
             Rayfield:Notify({
                 Title = "FPS Boost",
                 Content = "Частицы удалены!",
                 Duration = 1.5
             })
         else
-            restoreParticles()
+            for _, v in pairs(particlesList) do
+                if v then
+                    v.Enabled = true
+                    v.Parent = workspace
+                end
+            end
+            particlesList = {}
             Rayfield:Notify({
                 Title = "FPS Boost",
                 Content = "Частицы восстановлены!",
@@ -291,14 +293,34 @@ FPSBoostTab:CreateToggle({
     Callback = function(Value)
         Settings.FPSBoost.GrayTextures = Value
         if Value then
-            makeTexturesGray()
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
+                    table.insert(originalTextures, {obj = v, mat = v.Material})
+                    v.Material = Enum.Material.Plastic
+                    v.Color = Color3.fromRGB(128, 128, 128)
+                end
+                if v:IsA("Decal") or v:IsA("Texture") then
+                    v.Transparency = 1
+                end
+            end
             Rayfield:Notify({
                 Title = "FPS Boost",
                 Content = "Текстуры обесцвечены!",
                 Duration = 1.5
             })
         else
-            restoreTextures()
+            for _, data in pairs(originalTextures) do
+                if data.obj and data.obj.Parent then
+                    data.obj.Material = data.mat
+                    data.obj.Color = Color3.fromRGB(255, 255, 255)
+                end
+            end
+            originalTextures = {}
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:IsA("Decal") or v:IsA("Texture") then
+                    v.Transparency = 0
+                end
+            end
             Rayfield:Notify({
                 Title = "FPS Boost",
                 Content = "Текстуры восстановлены!",
@@ -314,14 +336,25 @@ FPSBoostTab:CreateToggle({
     Callback = function(Value)
         Settings.FPSBoost.GraySky = Value
         if Value then
-            makeSkyGray()
+            originalSky = Lighting.Sky
+            local newSky = Instance.new("Sky")
+            newSky.SkyboxBk = "rbxassetid://1382515588"
+            newSky.SkyboxDn = "rbxassetid://1382515588"
+            newSky.SkyboxFt = "rbxassetid://1382515588"
+            newSky.SkyboxLf = "rbxassetid://1382515588"
+            newSky.SkyboxRt = "rbxassetid://1382515588"
+            newSky.SkyboxUp = "rbxassetid://1382515588"
+            newSky.Parent = Lighting
+            Lighting.Sky = newSky
             Rayfield:Notify({
                 Title = "FPS Boost",
                 Content = "Небо стало серым!",
                 Duration = 1.5
             })
         else
-            restoreSky()
+            if originalSky then
+                Lighting.Sky = originalSky
+            end
             Rayfield:Notify({
                 Title = "FPS Boost",
                 Content = "Небо восстановлено!",
@@ -434,9 +467,28 @@ ControlTab:CreateButton({
         Settings.FPSBoost.RemoveParticles = false
         Settings.FPSBoost.GrayTextures = false
         Settings.FPSBoost.GraySky = false
-        restoreParticles()
-        restoreTextures()
-        restoreSky()
+        for _, v in pairs(particlesList) do
+            if v then
+                v.Enabled = true
+                v.Parent = workspace
+            end
+        end
+        particlesList = {}
+        for _, data in pairs(originalTextures) do
+            if data.obj and data.obj.Parent then
+                data.obj.Material = data.mat
+                data.obj.Color = Color3.fromRGB(255, 255, 255)
+            end
+        end
+        originalTextures = {}
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 0
+            end
+        end
+        if originalSky then
+            Lighting.Sky = originalSky
+        end
         Rayfield:Notify({
             Title = "Ryzen System",
             Content = "Все функции отключены!",
@@ -448,9 +500,28 @@ ControlTab:CreateButton({
 ControlTab:CreateButton({
     Name = "!DESTROY! (удалить скрипт)",
     Callback = function()
-        restoreParticles()
-        restoreTextures()
-        restoreSky()
+        for _, v in pairs(particlesList) do
+            if v then
+                v.Enabled = true
+                v.Parent = workspace
+            end
+        end
+        particlesList = {}
+        for _, data in pairs(originalTextures) do
+            if data.obj and data.obj.Parent then
+                data.obj.Material = data.mat
+                data.obj.Color = Color3.fromRGB(255, 255, 255)
+            end
+        end
+        originalTextures = {}
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 0
+            end
+        end
+        if originalSky then
+            Lighting.Sky = originalSky
+        end
         Rayfield:Destroy()
         for _, v in pairs(game.CoreGui:GetChildren()) do
             if v.Name == "Rayfield" or v.Name == "RyzenMobile" then
@@ -459,98 +530,6 @@ ControlTab:CreateButton({
         end
     end
 })
-
--- ============================================
--- ФУНКЦИИ FPS BOOST
--- ============================================
-
-local originalSky = nil
-local originalTextures = {}
-local particlesList = {}
-
--- СОХРАНЯЕМ ОРИГИНАЛЬНЫЕ ТЕКСТУРЫ
-local function saveOriginalTextures()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
-            table.insert(originalTextures, {obj = v, mat = v.Material})
-        end
-    end
-end
-
--- УДАЛЕНИЕ ЧАСТИЦ
-local function removeParticles()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-            table.insert(particlesList, v)
-            v.Enabled = false
-            v.Parent = nil
-        end
-    end
-end
-
-local function restoreParticles()
-    for _, v in pairs(particlesList) do
-        if v then
-            v.Enabled = true
-            v.Parent = workspace
-        end
-    end
-    particlesList = {}
-end
-
--- СЕРЫЕ ТЕКСТУРЫ
-local function makeTexturesGray()
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
-            table.insert(originalTextures, {obj = v, mat = v.Material})
-            v.Material = Enum.Material.Plastic
-            v.Color = Color3.fromRGB(128, 128, 128)
-        end
-        if v:IsA("Decal") or v:IsA("Texture") then
-            v.Transparency = 1
-        end
-    end
-end
-
-local function restoreTextures()
-    for _, data in pairs(originalTextures) do
-        if data.obj and data.obj.Parent then
-            data.obj.Material = data.mat
-            data.obj.Color = Color3.fromRGB(255, 255, 255)
-        end
-    end
-    originalTextures = {}
-    for _, v in pairs(workspace:GetDescendants()) do
-        if v:IsA("Decal") or v:IsA("Texture") then
-            v.Transparency = 0
-        end
-    end
-end
-
--- СЕРОЕ НЕБО
-local function makeSkyGray()
-    originalSky = Lighting.Sky
-    local newSky = Instance.new("Sky")
-    newSky.SkyboxBk = "rbxassetid://1382515588"
-    newSky.SkyboxDn = "rbxassetid://1382515588"
-    newSky.SkyboxFt = "rbxassetid://1382515588"
-    newSky.SkyboxLf = "rbxassetid://1382515588"
-    newSky.SkyboxRt = "rbxassetid://1382515588"
-    newSky.SkyboxUp = "rbxassetid://1382515588"
-    newSky.Parent = Lighting
-    Lighting.Sky = newSky
-end
-
-local function restoreSky()
-    if originalSky then
-        Lighting.Sky = originalSky
-    else
-        Lighting.Sky:Destroy()
-        local newSky = Instance.new("Sky")
-        newSky.Parent = Lighting
-        Lighting.Sky = newSky
-    end
-end
 
 -- ============================================
 -- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -728,8 +707,4 @@ local function drawCrosshair()
             Visible = true
         })
         createCrosshairObject("Line", {
-            From = Vector2.new(center.X + thick/2, center.Y),
-            To = Vector2.new(center.X + size, center.Y),
-            Thickness = thick,
-            Color = color,
-                
+            
