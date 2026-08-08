@@ -1,5 +1,5 @@
 -- RYZEN AIMBOT + ULTRA ESP НА RAYFIELD
--- СИНИЙ БОКС СО СТАТИСТИКОЙ ИГРОКА
+-- КРУТОЙ ESP С ЭФФЕКТАМИ + ЧИСЛОВОЕ HP НАД ПОЛОСКОЙ
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -8,6 +8,8 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 
 -- НАСТРОЙКИ
 local Settings = {
@@ -26,11 +28,15 @@ local Settings = {
         Health = false,
         Distance = false,
         TeamColor = false,
-        StatsBox = false
+        Glow = false,
+        Skeleton = false,
+        Chams = false,
+        Name = false,
+        Rainbow = false
     }
 }
 
--- СОЗДАНИЕ ОКНА RAYFIELD
+-- СОЗДАНИЕ ОКНА
 local Window = Rayfield:CreateWindow({
     Name = "🤑 Ryzen Aimbot Ultra",
     Icon = 0,
@@ -48,7 +54,7 @@ local Window = Rayfield:CreateWindow({
 -- ============================================
 local AimbotTab = Window:CreateTab("🎯 Aimbot", 0)
 
-AimbotTab:CreateSection("Настройки аимбота")
+local AimbotSection = AimbotTab:CreateSection("Настройки аимбота")
 
 AimbotTab:CreateToggle({
     Name = "Aimbot",
@@ -99,11 +105,11 @@ AimbotTab:CreateDropdown({
 })
 
 -- ============================================
--- ВКЛАДКА ESP
+-- ВКЛАДКА ULTRA ESP
 -- ============================================
-local ESPTab = Window:CreateTab("👁️ ESP", 0)
+local ESPTab = Window:CreateTab("👁️ Ultra ESP", 0)
 
-ESPTab:CreateSection("Основные настройки")
+local ESPSection = ESPTab:CreateSection("Основные настройки")
 
 ESPTab:CreateToggle({
     Name = "ESP Total",
@@ -114,14 +120,22 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "🌈 Rainbow ESP",
+    Name = "🌈 Rainbow ESP (все цвета радуги)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Rainbow = Value
     end
 })
 
-ESPTab:CreateSection("Боксы")
+ESPTab:CreateToggle({
+    Name = "🏷️ Имена игроков",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Name = Value
+    end
+})
+
+local BoxSection = ESPTab:CreateSection("Box ESP")
 
 ESPTab:CreateToggle({
     Name = "📦 Box ESP (рамка)",
@@ -132,27 +146,35 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "📊 Stats Box (статистика)",
+    Name = "✨ Glow Effect (свечение)",
     CurrentValue = false,
     Callback = function(Value)
-        Settings.ESP.StatsBox = Value
+        Settings.ESP.Glow = Value
     end
 })
 
-ESPTab:CreateSection("Линии")
+local LineSection = ESPTab:CreateSection("Линии")
 
 ESPTab:CreateToggle({
-    Name = "📏 Tracers (линии)",
+    Name = "📏 Tracers (линии к игроку)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Tracers = Value
     end
 })
 
-ESPTab:CreateSection("Информация")
+ESPTab:CreateToggle({
+    Name = "🦴 Skeleton (скелет)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Skeleton = Value
+    end
+})
+
+local InfoSection = ESPTab:CreateSection("Информация")
 
 ESPTab:CreateToggle({
-    Name = "❤️ Health Bar",
+    Name = "❤️ Health Bar (здоровье + числа)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Health = Value
@@ -160,7 +182,7 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "📏 Distance",
+    Name = "📏 Distance (дистанция)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.Distance = Value
@@ -168,7 +190,7 @@ ESPTab:CreateToggle({
 })
 
 ESPTab:CreateToggle({
-    Name = "🎨 Team Colors",
+    Name = "🎨 Team Colors (цвет команды)",
     CurrentValue = false,
     Callback = function(Value)
         Settings.ESP.TeamColor = Value
@@ -180,7 +202,7 @@ ESPTab:CreateToggle({
 -- ============================================
 local ControlTab = Window:CreateTab("⚙️ Управление", 0)
 
-ControlTab:CreateSection("Управление скриптом")
+local ControlSection = ControlTab:CreateSection("Управление скриптом")
 
 ControlTab:CreateButton({
     Name = "OFF ALL (отключить всё)",
@@ -194,7 +216,10 @@ ControlTab:CreateButton({
         Settings.ESP.Health = false
         Settings.ESP.Distance = false
         Settings.ESP.TeamColor = false
-        Settings.ESP.StatsBox = false
+        Settings.ESP.Glow = false
+        Settings.ESP.Skeleton = false
+        Settings.ESP.Chams = false
+        Settings.ESP.Name = false
         Settings.ESP.Rainbow = false
         Rayfield:Notify({
             Title = "Ryzen System",
@@ -217,9 +242,18 @@ ControlTab:CreateButton({
 })
 
 -- ============================================
--- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+-- УЛЬТРА ESP + ЭФФЕКТЫ
 -- ============================================
 
+-- РАДУЖНЫЙ ЦВЕТ
+local function getRainbowColor(time)
+    local r = math.sin(time) * 0.5 + 0.5
+    local g = math.sin(time + 2.094) * 0.5 + 0.5
+    local b = math.sin(time + 4.188) * 0.5 + 0.5
+    return Color3.new(r, g, b)
+end
+
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 local function isAlive(plr)
     local char = plr.Character
     return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0
@@ -230,13 +264,6 @@ local function getTeamColor(plr)
         return plr.Team.TeamColor.Color
     end
     return Color3.new(1, 1, 1)
-end
-
-local function getTeamName(plr)
-    if plr.Team and plr.Team.Name then
-        return plr.Team.Name
-    end
-    return "No Team"
 end
 
 local function getPart(plr, partName)
@@ -253,17 +280,7 @@ local function isVisible(origin, targetPos)
     return true
 end
 
-local function getRainbowColor(time)
-    local r = math.sin(time) * 0.5 + 0.5
-    local g = math.sin(time + 2.094) * 0.5 + 0.5
-    local b = math.sin(time + 4.188) * 0.5 + 0.5
-    return Color3.new(r, g, b)
-end
-
--- ============================================
 -- AIMBOT
--- ============================================
-
 local function getClosestPlayerInFOV()
     if not Settings.AimBot.Enabled then return nil end
     
@@ -318,10 +335,10 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ============================================
--- ESP С СИНИМ БОКСОМ И СТАТИСТИКОЙ
+-- УЛЬТРА ESP
 -- ============================================
-
 local drawingObjects = {}
+local glowObjects = {}
 
 local function clearDrawings()
     for _, obj in pairs(drawingObjects) do
@@ -330,6 +347,13 @@ local function clearDrawings()
         end
     end
     drawingObjects = {}
+    
+    for _, obj in pairs(glowObjects) do
+        if obj and obj.Remove then
+            obj:Remove()
+        end
+    end
+    glowObjects = {}
 end
 
 local function createDrawing(type, props)
@@ -341,177 +365,38 @@ local function createDrawing(type, props)
     return obj
 end
 
--- ФУНКЦИЯ ДЛЯ РИСОВАНИЯ СИНЕГО БОКСА СО СТАТИСТИКОЙ
-local function drawStatsBox(plr, headPos, espColor)
-    local char = plr.Character
-    if not char then return end
+-- ФУНКЦИЯ ДЛЯ РИСОВАНИЯ СКЕЛЕТА
+local function drawSkeleton(char, espColor)
+    local joints = {
+        {"Head", "UpperTorso"},
+        {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"},
+        {"UpperTorso", "RightUpperArm"},
+        {"RightUpperArm", "RightLowerArm"},
+        {"LowerTorso", "LeftUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"}
+    }
     
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChild("Humanoid")
-    if not root or not hum then return end
-    
-    -- ПОЛУЧАЕМ ДАННЫЕ
-    local health = math.floor(hum.Health)
-    local maxHealth = math.floor(hum.MaxHealth)
-    local teamName = getTeamName(plr)
-    local teamColor = getTeamColor(plr)
-    local playerName = plr.Name
-    
-    -- ВЫЧИСЛЯЕМ РАЗМЕРЫ БОКСА
-    local bottomPos, _ = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
-    local topPos, _ = Camera:WorldToViewportPoint(headPos)
-    local height = (topPos.Y - bottomPos.Y) + 30
-    local width = height * 0.45
-    local x = headPos.X - width/2
-    local y = topPos.Y - 20
-    
-    -- ЦВЕТ БОКСА (СИНИЙ С ПРОЗРАЧНОСТЬЮ)
-    local boxColor = Color3.fromRGB(30, 144, 255)
-    
-    -- ОСНОВНОЙ БОКС (С ЗАКРУГЛЕННЫМИ УГЛАМИ)
-    -- Рисуем прямоугольник с помощью линий (имитация скругления)
-    local cornerRadius = 8
-    
-    -- Верхняя линия
-    createDrawing("Line", {
-        From = Vector2.new(x + cornerRadius, y),
-        To = Vector2.new(x + width - cornerRadius, y),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- Нижняя линия
-    createDrawing("Line", {
-        From = Vector2.new(x + cornerRadius, y + height),
-        To = Vector2.new(x + width - cornerRadius, y + height),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- Левая линия
-    createDrawing("Line", {
-        From = Vector2.new(x, y + cornerRadius),
-        To = Vector2.new(x, y + height - cornerRadius),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- Правая линия
-    createDrawing("Line", {
-        From = Vector2.new(x + width, y + cornerRadius),
-        To = Vector2.new(x + width, y + height - cornerRadius),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- УГЛЫ (имитация скругления)
-    -- Верхний левый
-    createDrawing("Line", {
-        From = Vector2.new(x, y + cornerRadius),
-        To = Vector2.new(x + cornerRadius, y),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- Верхний правый
-    createDrawing("Line", {
-        From = Vector2.new(x + width - cornerRadius, y),
-        To = Vector2.new(x + width, y + cornerRadius),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- Нижний левый
-    createDrawing("Line", {
-        From = Vector2.new(x, y + height - cornerRadius),
-        To = Vector2.new(x + cornerRadius, y + height),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- Нижний правый
-    createDrawing("Line", {
-        From = Vector2.new(x + width - cornerRadius, y + height),
-        To = Vector2.new(x + width, y + height - cornerRadius),
-        Thickness = 2,
-        Color = boxColor,
-        Visible = true
-    })
-    
-    -- ФОН БОКСА (полупрозрачный)
-    createDrawing("Square", {
-        Position = Vector2.new(x + 1, y + 1),
-        Size = Vector2.new(width - 2, height - 2),
-        Thickness = 0,
-        Color = Color3.fromRGB(0, 0, 50),
-        Filled = true,
-        Visible = true,
-        Transparency = 0.6
-    })
-    
-    -- ============================================
-    -- СТАТИСТИКА ВНУТРИ БОКСА
-    -- ============================================
-    local textX = x + 5
-    local textY = y + 5
-    
-    -- NICKNAME (КРАСНЫЙ, СВЕРХУ)
-    createDrawing("Text", {
-        Position = Vector2.new(headPos.X, y - 18),
-        Text = "🔴 " .. playerName,
-        Size = 14,
-        Color = Color3.fromRGB(255, 50, 50),
-        Center = true,
-        Visible = true,
-        Outline = true,
-        OutlineColor = Color3.new(0, 0, 0)
-    })
-    
-    -- HEALTH (ЗЕЛЁНЫЙ)
-    local healthColor = Color3.fromRGB(0, 255, 100)
-    createDrawing("Text", {
-        Position = Vector2.new(textX, textY + 5),
-        Text = "🟢 Health: " .. health .. "/" .. maxHealth,
-        Size = 13,
-        Color = healthColor,
-        Center = false,
-        Visible = true,
-        Outline = true,
-        OutlineColor = Color3.new(0, 0, 0)
-    })
-    
-    -- TEAM (СИНИЙ, ЦВЕТ КОМАНДЫ)
-    local teamTextColor = teamColor
-    createDrawing("Text", {
-        Position = Vector2.new(textX, textY + 25),
-        Text = "🔵 Team: " .. teamName,
-        Size = 13,
-        Color = teamTextColor,
-        Center = false,
-        Visible = true,
-        Outline = true,
-        OutlineColor = Color3.new(0, 0, 0)
-    })
-    
-    -- DISTANCE (БЕЛЫЙ, ВНИЗУ)
-    local dist = math.floor((Camera.CFrame.Position - headPos.Position).Magnitude)
-    createDrawing("Text", {
-        Position = Vector2.new(textX, textY + 45),
-        Text = "📏 Distance: " .. dist .. "m",
-        Size = 13,
-        Color = Color3.new(1, 1, 1),
-        Center = false,
-        Visible = true,
-        Outline = true,
-        OutlineColor = Color3.new(0, 0, 0)
-    })
+    for _, joint in pairs(joints) do
+        local part1 = char:FindFirstChild(joint[1])
+        local part2 = char:FindFirstChild(joint[2])
+        if part1 and part2 then
+            local pos1, onScreen1 = Camera:WorldToViewportPoint(part1.Position)
+            local pos2, onScreen2 = Camera:WorldToViewportPoint(part2.Position)
+            if onScreen1 and onScreen2 then
+                createDrawing("Line", {
+                    From = Vector2.new(pos1.X, pos1.Y),
+                    To = Vector2.new(pos2.X, pos2.Y),
+                    Thickness = 2,
+                    Color = espColor,
+                    Visible = true
+                })
+            end
+        end
+    end
 end
 
 -- ОСНОВНОЙ ЦИКЛ ESP
@@ -542,14 +427,41 @@ RunService.RenderStepped:Connect(function()
         end
 
         -- ============================================
-        -- STATS BOX (СИНИЙ БОКС СО СТАТИСТИКОЙ)
+        -- GLOW ЭФФЕКТ (СВЕЧЕНИЕ)
         -- ============================================
-        if Settings.ESP.StatsBox then
-            drawStatsBox(plr, headPos, espColor)
+        if Settings.ESP.Glow then
+            for _, part in pairs(char:GetChildren()) do
+                if part:IsA("BasePart") then
+                    local glow = Instance.new("Highlight")
+                    glow.Parent = part
+                    glow.Adornee = part
+                    glow.FillColor = espColor
+                    glow.FillTransparency = 0.5
+                    glow.OutlineColor = espColor
+                    glow.OutlineTransparency = 0.3
+                    table.insert(glowObjects, glow)
+                end
+            end
         end
 
         -- ============================================
-        -- BOX (ОБЫЧНАЯ РАМКА)
+        -- NAME (ИМЯ)
+        -- ============================================
+        if Settings.ESP.Name then
+            createDrawing("Text", {
+                Position = Vector2.new(headPos.X, headPos.Y - 50),
+                Text = plr.Name,
+                Size = 16,
+                Color = espColor,
+                Center = true,
+                Visible = true,
+                Outline = true,
+                OutlineColor = Color3.new(0, 0, 0)
+            })
+        end
+
+        -- ============================================
+        -- BOX (РАМКА)
         -- ============================================
         if Settings.ESP.Box then
             local root = char:FindFirstChild("HumanoidRootPart")
@@ -561,6 +473,7 @@ RunService.RenderStepped:Connect(function()
                 local x = headPos.X - width/2
                 local y = headPos.Y
 
+                -- ОСНОВНАЯ РАМКА
                 createDrawing("Square", {
                     Position = Vector2.new(x, y),
                     Size = Vector2.new(width, height),
@@ -568,6 +481,17 @@ RunService.RenderStepped:Connect(function()
                     Color = espColor,
                     Filled = false,
                     Visible = true
+                })
+                
+                -- ДОПОЛНИТЕЛЬНАЯ РАМКА (3D ЭФФЕКТ)
+                createDrawing("Square", {
+                    Position = Vector2.new(x + 2, y + 2),
+                    Size = Vector2.new(width - 4, height - 4),
+                    Thickness = 1,
+                    Color = Color3.new(0, 0, 0),
+                    Filled = false,
+                    Visible = true,
+                    Transparency = 0.5
                 })
             end
         end
@@ -578,6 +502,7 @@ RunService.RenderStepped:Connect(function()
         if Settings.ESP.Tracers then
             local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
             
+            -- ОСНОВНАЯ ЛИНИЯ
             createDrawing("Line", {
                 From = center,
                 To = Vector2.new(headPos.X, headPos.Y),
@@ -585,32 +510,63 @@ RunService.RenderStepped:Connect(function()
                 Color = espColor,
                 Visible = true
             })
+            
+            -- ДОПОЛНИТЕЛЬНАЯ ТЕНЬ
+            createDrawing("Line", {
+                From = center + Vector2.new(1, 1),
+                To = Vector2.new(headPos.X + 1, headPos.Y + 1),
+                Thickness = 2,
+                Color = Color3.new(0, 0, 0),
+                Visible = true,
+                Transparency = 0.5
+            })
         end
 
         -- ============================================
-        -- HEALTH BAR (ПОЛОСКА ЗДОРОВЬЯ)
+        -- SKELETON (СКЕЛЕТ)
+        -- ============================================
+        if Settings.ESP.Skeleton then
+            drawSkeleton(char, espColor)
+        end
+
+        -- ============================================
+        -- HEALTH BAR (ЗДОРОВЬЕ) С ЧИСЛАМИ НАД ПОЛОСКОЙ
         -- ============================================
         if Settings.ESP.Health then
             local hum = char:FindFirstChild("Humanoid")
             if hum then
                 local healthPercent = hum.Health / hum.MaxHealth
-                local barWidth = 40
+                local barWidth = 50
                 local barX = headPos.X - barWidth/2
-                local barY = headPos.Y - 35
+                local barY = headPos.Y - 45
                 
+                -- ТЕКСТ HP НАД ПОЛОСКОЙ
+                createDrawing("Text", {
+                    Position = Vector2.new(headPos.X, barY - 10),
+                    Text = math.floor(hum.Health) .. " / " .. math.floor(hum.MaxHealth),
+                    Size = 13,
+                    Color = Color3.new(1, 1, 1),
+                    Center = true,
+                    Visible = true,
+                    Outline = true,
+                    OutlineColor = Color3.new(0, 0, 0)
+                })
+                
+                -- ФОН ПОЛОСКИ
                 createDrawing("Line", {
                     From = Vector2.new(barX, barY),
                     To = Vector2.new(barX + barWidth, barY),
-                    Thickness = 4,
+                    Thickness = 5,
                     Color = Color3.new(0.2, 0.2, 0.2),
                     Visible = true
                 })
                 
+                -- ЗАПОЛНЕНИЕ ПОЛОСКИ (ЦВЕТ МЕНЯЕТСЯ)
                 local healthColor = Color3.new(1 - healthPercent, healthPercent, 0)
                 createDrawing("Line", {
                     From = Vector2.new(barX, barY),
                     To = Vector2.new(barX + barWidth * healthPercent, barY),
-                    Thickness = 4,
+                    Thickness = 5,
                     Color = healthColor,
                     Visible = true
                 })
@@ -623,8 +579,8 @@ RunService.RenderStepped:Connect(function()
         if Settings.ESP.Distance then
             local dist = math.floor((Camera.CFrame.Position - head.Position).Magnitude)
             createDrawing("Text", {
-                Position = Vector2.new(headPos.X, headPos.Y + 30),
-                Text = dist .. "m",
+                Position = Vector2.new(headPos.X, headPos.Y + 35),
+                Text = "📏 " .. dist .. "m",
                 Size = 14,
                 Color = Color3.new(1, 1, 1),
                 Center = true,
@@ -638,4 +594,4 @@ end)
 
 game:GetService("BindableEvent").Destroying:Connect(clearDrawings)
 
-print("Ryzen Aimbot + Ultra ESP с синим боксом статистики загружен!")
+print("Ryzen Aimbot + Ultra ESP загружен!")
