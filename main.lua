@@ -1,5 +1,5 @@
 -- RYZEN AIMBOT + ULTRA ESP НА RAYFIELD
--- ФИОЛЕТОВАЯ ТЕМА + FOV ВИЗУАЛИЗАЦИЯ + НАСТРОЙКА ЦВЕТА
+-- СИНИЙ БОКС СО СТАТИСТИКОЙ ИГРОКА
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -9,19 +9,6 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 
--- ============================================
--- ФИОЛЕТОВАЯ ТЕМА RAYFIELD
--- ============================================
-local PurpleTheme = {
-    Background = Color3.fromRGB(20, 10, 30),
-    Glow = Color3.fromRGB(120, 50, 200),
-    Accent = Color3.fromRGB(150, 60, 220),
-    Light = Color3.fromRGB(180, 100, 240),
-    Dark = Color3.fromRGB(15, 5, 25),
-    Text = Color3.fromRGB(220, 180, 255),
-    Border = Color3.fromRGB(130, 60, 200)
-}
-
 -- НАСТРОЙКИ
 local Settings = {
     AimBot = {
@@ -30,9 +17,7 @@ local Settings = {
         Smoothness = 0.3,
         TargetPart = "Head",
         TeamCheck = false,
-        WallCheck = false,
-        ShowFOV = false,
-        FOVColor = Color3.fromRGB(255, 0, 255)
+        WallCheck = false
     },
     ESP = {
         Enabled = false,
@@ -41,42 +26,22 @@ local Settings = {
         Health = false,
         Distance = false,
         TeamColor = false,
-        StatsBox = false,
-        Rainbow = false
+        StatsBox = false
     }
 }
 
--- СОЗДАНИЕ ОКНА RAYFIELD С ФИОЛЕТОВОЙ ТЕМОЙ
+-- СОЗДАНИЕ ОКНА RAYFIELD
 local Window = Rayfield:CreateWindow({
     Name = "🤑 Ryzen Aimbot Ultra",
     Icon = 0,
     LoadingTitle = "Ryzen System",
-    LoadingSubtitle = "Purple Edition",
+    LoadingSubtitle = "Ultra ESP Edition",
     Theme = "Dark",
     ConfigurationSaving = {
         Enabled = true,
         FileName = "RyzenUltra"
     }
 })
-
--- ПРИМЕНЯЕМ ФИОЛЕТОВУЮ ТЕМУ К GUI
-local function applyPurpleTheme()
-    for _, v in pairs(game.CoreGui:GetDescendants()) do
-        if v:IsA("Frame") or v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("ImageLabel") then
-            if v.Name == "Background" or v.Name == "MainFrame" then
-                v.BackgroundColor3 = PurpleTheme.Background
-            end
-            if v.Name == "Accent" or v.Name == "Glow" then
-                v.BackgroundColor3 = PurpleTheme.Accent
-            end
-            if v:IsA("TextLabel") or v:IsA("TextButton") then
-                if v.TextColor3 == Color3.fromRGB(255, 255, 255) then
-                    v.TextColor3 = PurpleTheme.Text
-                end
-            end
-        end
-    end
-end
 
 -- ============================================
 -- ВКЛАДКА AIMBOT
@@ -109,14 +74,6 @@ AimbotTab:CreateToggle({
     end
 })
 
-AimbotTab:CreateToggle({
-    Name = "Show FOV (визуализация)",
-    CurrentValue = false,
-    Callback = function(Value)
-        Settings.AimBot.ShowFOV = Value
-    end
-})
-
 AimbotTab:CreateSlider({
     Name = "FOV Range",
     Range = {10, 360},
@@ -140,42 +97,6 @@ AimbotTab:CreateDropdown({
         end
     end
 })
-
--- ============================================
--- ВКЛАДКА "FOV COLOR" (ВЫБОР ЦВЕТА)
--- ============================================
-local FOVColorTab = Window:CreateTab("🎨 FOV Color", 0)
-
-FOVColorTab:CreateSection("Выберите цвет для FOV")
-
-local colors = {
-    {"Красный", Color3.fromRGB(255, 0, 0)},
-    {"Зелёный", Color3.fromRGB(0, 255, 0)},
-    {"Синий", Color3.fromRGB(0, 0, 255)},
-    {"Жёлтый", Color3.fromRGB(255, 255, 0)},
-    {"Фиолетовый", Color3.fromRGB(255, 0, 255)},
-    {"Голубой", Color3.fromRGB(0, 255, 255)},
-    {"Оранжевый", Color3.fromRGB(255, 165, 0)},
-    {"Розовый", Color3.fromRGB(255, 105, 180)},
-    {"Белый", Color3.fromRGB(255, 255, 255)}
-}
-
-for _, colorData in ipairs(colors) do
-    local colorName = colorData[1]
-    local colorValue = colorData[2]
-    
-    FOVColorTab:CreateButton({
-        Name = colorName .. " ●",
-        Callback = function()
-            Settings.AimBot.FOVColor = colorValue
-            Rayfield:Notify({
-                Title = "Цвет FOV",
-                Content = "Выбран: " .. colorName,
-                Duration = 1.5
-            })
-        end
-    })
-end
 
 -- ============================================
 -- ВКЛАДКА ESP
@@ -267,7 +188,6 @@ ControlTab:CreateButton({
         Settings.AimBot.Enabled = false
         Settings.AimBot.WallCheck = false
         Settings.AimBot.TeamCheck = false
-        Settings.AimBot.ShowFOV = false
         Settings.ESP.Enabled = false
         Settings.ESP.Box = false
         Settings.ESP.Tracers = false
@@ -398,38 +318,6 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- ============================================
--- FOV ВИЗУАЛИЗАЦИЯ
--- ============================================
-local fovCircle = nil
-
-local function drawFOV()
-    if not Settings.AimBot.ShowFOV then
-        if fovCircle then
-            fovCircle:Remove()
-            fovCircle = nil
-        end
-        return
-    end
-    
-    if not fovCircle then
-        fovCircle = Drawing.new("Circle")
-        fovCircle.Thickness = 2
-        fovCircle.NumSides = 60
-        fovCircle.Filled = false
-    end
-    
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local radius = (Settings.AimBot.FOV / 2) * (Camera.ViewportSize.X / 100)
-    
-    fovCircle.Position = center
-    fovCircle.Radius = radius
-    fovCircle.Color = Settings.AimBot.FOVColor
-    fovCircle.Visible = true
-end
-
-RunService.RenderStepped:Connect(drawFOV)
-
--- ============================================
 -- ESP С СИНИМ БОКСОМ И СТАТИСТИКОЙ
 -- ============================================
 
@@ -462,12 +350,14 @@ local function drawStatsBox(plr, headPos, espColor)
     local hum = char:FindFirstChild("Humanoid")
     if not root or not hum then return end
     
+    -- ПОЛУЧАЕМ ДАННЫЕ
     local health = math.floor(hum.Health)
     local maxHealth = math.floor(hum.MaxHealth)
     local teamName = getTeamName(plr)
     local teamColor = getTeamColor(plr)
     local playerName = plr.Name
     
+    -- ВЫЧИСЛЯЕМ РАЗМЕРЫ БОКСА
     local bottomPos, _ = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
     local topPos, _ = Camera:WorldToViewportPoint(headPos)
     local height = (topPos.Y - bottomPos.Y) + 30
@@ -475,9 +365,14 @@ local function drawStatsBox(plr, headPos, espColor)
     local x = headPos.X - width/2
     local y = topPos.Y - 20
     
+    -- ЦВЕТ БОКСА (СИНИЙ С ПРОЗРАЧНОСТЬЮ)
     local boxColor = Color3.fromRGB(30, 144, 255)
+    
+    -- ОСНОВНОЙ БОКС (С ЗАКРУГЛЕННЫМИ УГЛАМИ)
+    -- Рисуем прямоугольник с помощью линий (имитация скругления)
     local cornerRadius = 8
     
+    -- Верхняя линия
     createDrawing("Line", {
         From = Vector2.new(x + cornerRadius, y),
         To = Vector2.new(x + width - cornerRadius, y),
@@ -486,6 +381,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- Нижняя линия
     createDrawing("Line", {
         From = Vector2.new(x + cornerRadius, y + height),
         To = Vector2.new(x + width - cornerRadius, y + height),
@@ -494,6 +390,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- Левая линия
     createDrawing("Line", {
         From = Vector2.new(x, y + cornerRadius),
         To = Vector2.new(x, y + height - cornerRadius),
@@ -502,6 +399,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- Правая линия
     createDrawing("Line", {
         From = Vector2.new(x + width, y + cornerRadius),
         To = Vector2.new(x + width, y + height - cornerRadius),
@@ -510,6 +408,8 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- УГЛЫ (имитация скругления)
+    -- Верхний левый
     createDrawing("Line", {
         From = Vector2.new(x, y + cornerRadius),
         To = Vector2.new(x + cornerRadius, y),
@@ -518,6 +418,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- Верхний правый
     createDrawing("Line", {
         From = Vector2.new(x + width - cornerRadius, y),
         To = Vector2.new(x + width, y + cornerRadius),
@@ -526,6 +427,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- Нижний левый
     createDrawing("Line", {
         From = Vector2.new(x, y + height - cornerRadius),
         To = Vector2.new(x + cornerRadius, y + height),
@@ -534,6 +436,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- Нижний правый
     createDrawing("Line", {
         From = Vector2.new(x + width - cornerRadius, y + height),
         To = Vector2.new(x + width, y + height - cornerRadius),
@@ -542,6 +445,7 @@ local function drawStatsBox(plr, headPos, espColor)
         Visible = true
     })
     
+    -- ФОН БОКСА (полупрозрачный)
     createDrawing("Square", {
         Position = Vector2.new(x + 1, y + 1),
         Size = Vector2.new(width - 2, height - 2),
@@ -552,9 +456,13 @@ local function drawStatsBox(plr, headPos, espColor)
         Transparency = 0.6
     })
     
+    -- ============================================
+    -- СТАТИСТИКА ВНУТРИ БОКСА
+    -- ============================================
     local textX = x + 5
     local textY = y + 5
     
+    -- NICKNAME (КРАСНЫЙ, СВЕРХУ)
     createDrawing("Text", {
         Position = Vector2.new(headPos.X, y - 18),
         Text = "🔴 " .. playerName,
@@ -566,6 +474,7 @@ local function drawStatsBox(plr, headPos, espColor)
         OutlineColor = Color3.new(0, 0, 0)
     })
     
+    -- HEALTH (ЗЕЛЁНЫЙ)
     local healthColor = Color3.fromRGB(0, 255, 100)
     createDrawing("Text", {
         Position = Vector2.new(textX, textY + 5),
@@ -578,6 +487,7 @@ local function drawStatsBox(plr, headPos, espColor)
         OutlineColor = Color3.new(0, 0, 0)
     })
     
+    -- TEAM (СИНИЙ, ЦВЕТ КОМАНДЫ)
     local teamTextColor = teamColor
     createDrawing("Text", {
         Position = Vector2.new(textX, textY + 25),
@@ -590,6 +500,7 @@ local function drawStatsBox(plr, headPos, espColor)
         OutlineColor = Color3.new(0, 0, 0)
     })
     
+    -- DISTANCE (БЕЛЫЙ, ВНИЗУ)
     local dist = math.floor((Camera.CFrame.Position - headPos.Position).Magnitude)
     createDrawing("Text", {
         Position = Vector2.new(textX, textY + 45),
@@ -623,16 +534,23 @@ RunService.RenderStepped:Connect(function()
         local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
         if not onScreen then continue end
 
+        -- ВЫБОР ЦВЕТА
         local teamCol = getTeamColor(plr)
         local espColor = Settings.ESP.TeamColor and teamCol or Color3.new(1, 1, 1)
         if Settings.ESP.Rainbow then
             espColor = rainbowColor
         end
 
+        -- ============================================
+        -- STATS BOX (СИНИЙ БОКС СО СТАТИСТИКОЙ)
+        -- ============================================
         if Settings.ESP.StatsBox then
             drawStatsBox(plr, headPos, espColor)
         end
 
+        -- ============================================
+        -- BOX (ОБЫЧНАЯ РАМКА)
+        -- ============================================
         if Settings.ESP.Box then
             local root = char:FindFirstChild("HumanoidRootPart")
             if root then
@@ -654,6 +572,9 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
+        -- ============================================
+        -- TRACERS (ЛИНИИ)
+        -- ============================================
         if Settings.ESP.Tracers then
             local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
             
@@ -666,6 +587,9 @@ RunService.RenderStepped:Connect(function()
             })
         end
 
+        -- ============================================
+        -- HEALTH BAR (ПОЛОСКА ЗДОРОВЬЯ)
+        -- ============================================
         if Settings.ESP.Health then
             local hum = char:FindFirstChild("Humanoid")
             if hum then
@@ -693,7 +617,25 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
+        -- ============================================
+        -- DISTANCE (ДИСТАНЦИЯ)
+        -- ============================================
         if Settings.ESP.Distance then
             local dist = math.floor((Camera.CFrame.Position - head.Position).Magnitude)
             createDrawing("Text", {
-      
+                Position = Vector2.new(headPos.X, headPos.Y + 30),
+                Text = dist .. "m",
+                Size = 14,
+                Color = Color3.new(1, 1, 1),
+                Center = true,
+                Visible = true,
+                Outline = true,
+                OutlineColor = Color3.new(0, 0, 0)
+            })
+        end
+    end
+end)
+
+game:GetService("BindableEvent").Destroying:Connect(clearDrawings)
+
+print("Ryzen Aimbot + Ultra ESP с синим боксом статистики загружен!")
