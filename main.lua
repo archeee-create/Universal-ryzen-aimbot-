@@ -1,5 +1,5 @@
 -- RYZEN AIMBOT + ULTRA ESP НА RAYFIELD
--- ФИОЛЕТОВАЯ ТЕМА + FPS BOOST
+-- ФИОЛЕТОВАЯ ТЕМА + FOV ВИЗУАЛИЗАЦИЯ + ПРИЦЕЛЫ
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -8,7 +8,19 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
+
+-- ============================================
+-- ФИОЛЕТОВАЯ ТЕМА RAYFIELD
+-- ============================================
+local PurpleTheme = {
+    Background = Color3.fromRGB(20, 10, 30),
+    Glow = Color3.fromRGB(120, 50, 200),
+    Accent = Color3.fromRGB(150, 60, 220),
+    Light = Color3.fromRGB(180, 100, 240),
+    Dark = Color3.fromRGB(15, 5, 25),
+    Text = Color3.fromRGB(220, 180, 255),
+    Border = Color3.fromRGB(130, 60, 200)
+}
 
 -- НАСТРОЙКИ
 local Settings = {
@@ -38,11 +50,6 @@ local Settings = {
         Color = Color3.fromRGB(0, 255, 0),
         Size = 20,
         Thickness = 2
-    },
-    FPSBoost = {
-        RemoveParticles = false,
-        GrayTextures = false,
-        GraySky = false
     }
 }
 
@@ -123,7 +130,7 @@ AimbotTab:CreateDropdown({
 })
 
 -- ============================================
--- ВКЛАДКА "CROSSHAIR"
+-- ВКЛАДКА "CROSSHAIR" (ПРИЦЕЛ)
 -- ============================================
 local CrosshairTab = Window:CreateTab("🎯 Crosshair", 0)
 
@@ -242,129 +249,6 @@ for _, colorData in ipairs(fovColors) do
 end
 
 -- ============================================
--- ВКЛАДКА "FPS BOOST"
--- ============================================
-local FPSBoostTab = Window:CreateTab("⚡ FPS Boost", 0)
-
-FPSBoostTab:CreateSection("Оптимизация производительности")
-
-local particlesList = {}
-local originalTextures = {}
-local originalSky = nil
-
-FPSBoostTab:CreateToggle({
-    Name = "Убрать кастомные частицы",
-    CurrentValue = false,
-    Callback = function(Value)
-        Settings.FPSBoost.RemoveParticles = Value
-        if Value then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Fire") or v:IsA("Smoke") or v:IsA("Sparkles") then
-                    table.insert(particlesList, v)
-                    v.Enabled = false
-                    v.Parent = nil
-                end
-            end
-            Rayfield:Notify({
-                Title = "FPS Boost",
-                Content = "Частицы удалены!",
-                Duration = 1.5
-            })
-        else
-            for _, v in pairs(particlesList) do
-                if v then
-                    v.Enabled = true
-                    v.Parent = workspace
-                end
-            end
-            particlesList = {}
-            Rayfield:Notify({
-                Title = "FPS Boost",
-                Content = "Частицы восстановлены!",
-                Duration = 1.5
-            })
-        end
-    end
-})
-
-FPSBoostTab:CreateToggle({
-    Name = "Сделать текстуры серыми",
-    CurrentValue = false,
-    Callback = function(Value)
-        Settings.FPSBoost.GrayTextures = Value
-        if Value then
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("BasePart") and v.Material ~= Enum.Material.Plastic then
-                    table.insert(originalTextures, {obj = v, mat = v.Material})
-                    v.Material = Enum.Material.Plastic
-                    v.Color = Color3.fromRGB(128, 128, 128)
-                end
-                if v:IsA("Decal") or v:IsA("Texture") then
-                    v.Transparency = 1
-                end
-            end
-            Rayfield:Notify({
-                Title = "FPS Boost",
-                Content = "Текстуры обесцвечены!",
-                Duration = 1.5
-            })
-        else
-            for _, data in pairs(originalTextures) do
-                if data.obj and data.obj.Parent then
-                    data.obj.Material = data.mat
-                    data.obj.Color = Color3.fromRGB(255, 255, 255)
-                end
-            end
-            originalTextures = {}
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("Decal") or v:IsA("Texture") then
-                    v.Transparency = 0
-                end
-            end
-            Rayfield:Notify({
-                Title = "FPS Boost",
-                Content = "Текстуры восстановлены!",
-                Duration = 1.5
-            })
-        end
-    end
-})
-
-FPSBoostTab:CreateToggle({
-    Name = "Сделать небо серым",
-    CurrentValue = false,
-    Callback = function(Value)
-        Settings.FPSBoost.GraySky = Value
-        if Value then
-            originalSky = Lighting.Sky
-            local newSky = Instance.new("Sky")
-            newSky.SkyboxBk = "rbxassetid://1382515588"
-            newSky.SkyboxDn = "rbxassetid://1382515588"
-            newSky.SkyboxFt = "rbxassetid://1382515588"
-            newSky.SkyboxLf = "rbxassetid://1382515588"
-            newSky.SkyboxRt = "rbxassetid://1382515588"
-            newSky.SkyboxUp = "rbxassetid://1382515588"
-            newSky.Parent = Lighting
-            Lighting.Sky = newSky
-            Rayfield:Notify({
-                Title = "FPS Boost",
-                Content = "Небо стало серым!",
-                Duration = 1.5
-            })
-        else
-            if originalSky then
-                Lighting.Sky = originalSky
-            end
-            Rayfield:Notify({
-                Title = "FPS Boost",
-                Content = "Небо восстановлено!",
-                Duration = 1.5
-            })
-        end
-    end
-})
-
--- ============================================
 -- ВКЛАДКА ESP
 -- ============================================
 local ESPTab = Window:CreateTab("👁️ ESP", 0)
@@ -464,31 +348,6 @@ ControlTab:CreateButton({
         Settings.ESP.StatsBox = false
         Settings.ESP.Rainbow = false
         Settings.Crosshair.Enabled = false
-        Settings.FPSBoost.RemoveParticles = false
-        Settings.FPSBoost.GrayTextures = false
-        Settings.FPSBoost.GraySky = false
-        for _, v in pairs(particlesList) do
-            if v then
-                v.Enabled = true
-                v.Parent = workspace
-            end
-        end
-        particlesList = {}
-        for _, data in pairs(originalTextures) do
-            if data.obj and data.obj.Parent then
-                data.obj.Material = data.mat
-                data.obj.Color = Color3.fromRGB(255, 255, 255)
-            end
-        end
-        originalTextures = {}
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency = 0
-            end
-        end
-        if originalSky then
-            Lighting.Sky = originalSky
-        end
         Rayfield:Notify({
             Title = "Ryzen System",
             Content = "Все функции отключены!",
@@ -500,28 +359,6 @@ ControlTab:CreateButton({
 ControlTab:CreateButton({
     Name = "!DESTROY! (удалить скрипт)",
     Callback = function()
-        for _, v in pairs(particlesList) do
-            if v then
-                v.Enabled = true
-                v.Parent = workspace
-            end
-        end
-        particlesList = {}
-        for _, data in pairs(originalTextures) do
-            if data.obj and data.obj.Parent then
-                data.obj.Material = data.mat
-                data.obj.Color = Color3.fromRGB(255, 255, 255)
-            end
-        end
-        originalTextures = {}
-        for _, v in pairs(workspace:GetDescendants()) do
-            if v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency = 0
-            end
-        end
-        if originalSky then
-            Lighting.Sky = originalSky
-        end
         Rayfield:Destroy()
         for _, v in pairs(game.CoreGui:GetChildren()) do
             if v.Name == "Rayfield" or v.Name == "RyzenMobile" then
@@ -698,7 +535,9 @@ local function drawCrosshair()
     local color = Settings.Crosshair.Color
     local style = Settings.Crosshair.Style
     
+    -- КЛАССИЧЕСКИЙ (+)
     if style == "Классический" then
+        -- Горизонтальная линия (левая)
         createCrosshairObject("Line", {
             From = Vector2.new(center.X - size, center.Y),
             To = Vector2.new(center.X - thick/2, center.Y),
@@ -706,5 +545,176 @@ local function drawCrosshair()
             Color = color,
             Visible = true
         })
+        -- Горизонтальная линия (правая)
         createCrosshairObject("Line", {
-            
+            From = Vector2.new(center.X + thick/2, center.Y),
+            To = Vector2.new(center.X + size, center.Y),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        -- Вертикальная линия (верхняя)
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X, center.Y - size),
+            To = Vector2.new(center.X, center.Y - thick/2),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        -- Вертикальная линия (нижняя)
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X, center.Y + thick/2),
+            To = Vector2.new(center.X, center.Y + size),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        
+    -- ТОЧКА
+    elseif style == "Точка" then
+        createCrosshairObject("Circle", {
+            Position = center,
+            Radius = size/3,
+            Thickness = thick,
+            Color = color,
+            Filled = true,
+            Visible = true
+        })
+        
+    -- КРУГ
+    elseif style == "Круг" then
+        createCrosshairObject("Circle", {
+            Position = center,
+            Radius = size/1.5,
+            Thickness = thick,
+            Color = color,
+            Filled = false,
+            Visible = true
+        })
+        -- Точка в центре
+        createCrosshairObject("Circle", {
+            Position = center,
+            Radius = 2,
+            Thickness = thick,
+            Color = color,
+            Filled = true,
+            Visible = true
+        })
+        
+    -- КРЕСТ (X)
+    elseif style == "Крест" then
+        local offset = size * 0.7
+        -- Линия 1 (\)
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X - offset, center.Y - offset),
+            To = Vector2.new(center.X + offset, center.Y + offset),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        -- Линия 2 (/)
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X + offset, center.Y - offset),
+            To = Vector2.new(center.X - offset, center.Y + offset),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        
+    -- СТРЕЛКА (↑)
+    elseif style == "Стрелка" then
+        -- Вертикальная линия
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X, center.Y + size/2),
+            To = Vector2.new(center.X, center.Y - size/2),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        -- Верхняя стрелка (левая)
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X - size/3, center.Y - size/3),
+            To = Vector2.new(center.X, center.Y - size/2),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        -- Верхняя стрелка (правая)
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X + size/3, center.Y - size/3),
+            To = Vector2.new(center.X, center.Y - size/2),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        
+    -- РОМБ (◇)
+    elseif style == "Ромб" then
+        local s = size/2
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X, center.Y - s),
+            To = Vector2.new(center.X + s, center.Y),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X + s, center.Y),
+            To = Vector2.new(center.X, center.Y + s),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X, center.Y + s),
+            To = Vector2.new(center.X - s, center.Y),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+        createCrosshairObject("Line", {
+            From = Vector2.new(center.X - s, center.Y),
+            To = Vector2.new(center.X, center.Y - s),
+            Thickness = thick,
+            Color = color,
+            Visible = true
+        })
+    end
+end
+
+RunService.RenderStepped:Connect(drawCrosshair)
+
+-- ============================================
+-- ESP С СИНИМ БОКСОМ И СТАТИСТИКОЙ
+-- ============================================
+
+local drawingObjects = {}
+
+local function clearDrawings()
+    for _, obj in pairs(drawingObjects) do
+        if obj and obj.Remove then
+            obj:Remove()
+        end
+    end
+    drawingObjects = {}
+end
+
+local function createDrawing(type, props)
+    local obj = Drawing.new(type)
+    for k, v in pairs(props) do
+        obj[k] = v
+    end
+    table.insert(drawingObjects, obj)
+    return obj
+end
+
+local function drawStatsBox(plr, headPos, espColor)
+    local char = plr.Character
+    if not char then return end
+    
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
+    
+    local health = math.floor(hum.Health)
+    local maxHealth =
