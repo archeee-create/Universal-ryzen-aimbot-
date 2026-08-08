@@ -328,20 +328,3 @@ destroyBtn.TextScaled = true
 destroyBtn.Font = Enum.Font.SourceSansBold
 destroyBtn.Parent = bottomFrame
 
-local destroyCorner = Instance.new("UICorner")
-destroyCorner.CornerRadius = UDim.new(0, 6)
-destroyCorner.Parent = destroyBtn
-
-destroyBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    Overlay.Visible = false
-    ScreenGui:Destroy()
-end)
-
-local menuOpen = false
-
-FloatButton.MouseButton1Click:Connect(function()
-    menuOpen = not menuOpen
-    MainFrame.Visible = menuOpen
-    Overlay.Visible = menuOpen
-end)
