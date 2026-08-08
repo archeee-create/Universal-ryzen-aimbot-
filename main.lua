@@ -1,292 +1,390 @@
+-- RYZEN AIMBOT + ESP НА RAYFIELD
+-- ДЛЯ DELTA И ДРУГИХ ИСПОЛНИТЕЛЕЙ
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RyzenMobile"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- НАСТРОЙКИ
+local Settings = {
+    AimBot = {
+        Enabled = false,
+        FOV = 120,
+        Smoothness = 0.3,
+        TargetPart = "Head",
+        TeamCheck = false,
+        WallCheck = false
+    },
+    ESP = {
+        Enabled = false,
+        Box = false,
+        Tracers = false,
+        Health = false,
+        Distance = false,
+        TeamColor = false
+    }
+}
 
-local FloatButton = Instance.new("ImageButton")
-FloatButton.Size = UDim2.new(0, 70, 0, 70)
-FloatButton.Position = UDim2.new(0.85, -35, 0.85, -35)
-FloatButton.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-FloatButton.BackgroundTransparency = 0.2
-FloatButton.BorderSizePixel = 2
-FloatButton.BorderColor3 = Color3.fromRGB(0, 255, 200)
-FloatButton.Image = "rbxassetid://3926305904"
-FloatButton.ImageColor3 = Color3.fromRGB(0, 255, 200)
-FloatButton.ImageTransparency = 0.5
-FloatButton.Parent = ScreenGui
+-- СОЗДАНИЕ ОКНА
+local Window = Rayfield:CreateWindow({
+    Name = "🤑 Ryzen Aimbot",
+    Icon = 0,
+    LoadingTitle = "Ryzen System",
+    LoadingSubtitle = "by archeee-create",
+    Theme = "Dark",
+    ConfigurationSaving = {
+        Enabled = true,
+        FileName = "RyzenAimbot"
+    }
+})
 
-local ButtonLabel = Instance.new("TextLabel")
-ButtonLabel.Size = UDim2.new(1, 0, 1, 0)
-ButtonLabel.BackgroundTransparency = 1
-ButtonLabel.Text = "UNIVERSAL"
-ButtonLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-ButtonLabel.TextScaled = true
-ButtonLabel.Font = Enum.Font.SourceSansBold
-ButtonLabel.Parent = FloatButton
+-- ============================================
+-- ВКЛАДКА AIMBOT
+-- ============================================
+local AimbotTab = Window:CreateTab("🎯 Aimbot", 0)
 
-local dragging = false
-local dragStart = nil
-local startPos = nil
-local clickStart = nil
-local isDragging = false
+local AimbotSection = AimbotTab:CreateSection("Настройки аимбота")
 
-FloatButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        clickStart = tick()
-        dragStart = input.Position
-        startPos = FloatButton.Position
-        dragging = true
-        isDragging = false
+AimbotTab:CreateToggle({
+    Name = "Aimbot",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AimBot.Enabled = Value
     end
-end)
+})
 
-FloatButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch and dragging then
-        dragging = false
-        local elapsed = tick() - clickStart
-        if elapsed < 0.3 and not isDragging then
-            menuOpen = not menuOpen
-            MainFrame.Visible = menuOpen
-            Overlay.Visible = menuOpen
-        end
+AimbotTab:CreateToggle({
+    Name = "Wall Check (сквозь стены)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AimBot.WallCheck = Value
     end
-end)
+})
 
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.Touch then
-        local delta = input.Position - dragStart
-        if delta.Magnitude > 10 then
-            isDragging = true
-        end
-        local newPos = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-        newPos = UDim2.new(
-            math.clamp(newPos.X.Scale, 0, 1),
-            math.clamp(newPos.X.Offset, 0, 0),
-            math.clamp(newPos.Y.Scale, 0, 1),
-            math.clamp(newPos.Y.Offset, 0, 0)
-        )
-        FloatButton.Position = newPos
+AimbotTab:CreateToggle({
+    Name = "Team Check (свои)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.AimBot.TeamCheck = Value
     end
-end)
+})
 
-local Overlay = Instance.new("Frame")
-Overlay.Size = UDim2.new(1, 0, 1, 0)
-Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Overlay.BackgroundTransparency = 0.5
-Overlay.Visible = false
-Overlay.Parent = ScreenGui
+AimbotTab:CreateSlider({
+    Name = "FOV Range",
+    Range = {10, 360},
+    Increment = 1,
+    Suffix = "°",
+    CurrentValue = 120,
+    Callback = function(Value)
+        Settings.AimBot.FOV = Value
+    end
+})
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 370, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -185, 0.5, -200)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
-MainFrame.BackgroundTransparency = 0.1
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(0, 255, 200)
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
-
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = MainFrame
-
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.BackgroundColor3 = Color3.fromRGB(0, 255, 200)
-Title.BackgroundTransparency = 0.3
-Title.Text = "🤑 Ryzen aimbot 🤑"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextScaled = true
-Title.Font = Enum.Font.SourceSansBold
-Title.Selectable = false
-Title.AutoButtonColor = false
-Title.Active = false
-Title.Parent = MainFrame
-
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 12)
-titleCorner.Parent = Title
-
-local Divider = Instance.new("Frame")
-Divider.Size = UDim2.new(0.9, 0, 0, 2)
-Divider.Position = UDim2.new(0.05, 0, 0, 42)
-Divider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-Divider.BackgroundTransparency = 0.5
-Divider.BorderSizePixel = 0
-Divider.Parent = MainFrame
-
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1, 0, 0, 310)
-scrollFrame.Position = UDim2.new(0, 0, 0, 48)
-scrollFrame.BackgroundTransparency = 1
-scrollFrame.BorderSizePixel = 0
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 500)
-scrollFrame.ScrollBarThickness = 5
-scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 200)
-scrollFrame.Parent = MainFrame
-
-local function createLabel(parent, y, text)
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 25)
-    label.Position = UDim2.new(0, 0, 0, y)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = Color3.fromRGB(0, 255, 200)
-    label.TextScaled = true
-    label.Font = Enum.Font.SourceSansBold
-    label.Parent = parent
-    return label
-end
-
-local function createCheckbox(parent, yPos, label)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(0.95, 0, 0, 40)
-    container.Position = UDim2.new(0.025, 0, 0, yPos)
-    container.BackgroundTransparency = 1
-    container.Parent = parent
-    
-    local checkbox = Instance.new("TextButton")
-    checkbox.Size = UDim2.new(0, 30, 0, 30)
-    checkbox.Position = UDim2.new(0, 0, 0.5, -15)
-    checkbox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-    checkbox.BorderSizePixel = 2
-    checkbox.BorderColor3 = Color3.fromRGB(150, 150, 170)
-    checkbox.Text = ""
-    checkbox.TextColor3 = Color3.fromRGB(0, 255, 100)
-    checkbox.TextScaled = true
-    checkbox.Font = Enum.Font.SourceSansBold
-    checkbox.Parent = container
-    
-    local chkCorner = Instance.new("UICorner")
-    chkCorner.CornerRadius = UDim.new(0, 4)
-    chkCorner.Parent = checkbox
-    
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(1, -40, 1, 0)
-    text.Position = UDim2.new(0, 40, 0, 0)
-    text.BackgroundTransparency = 1
-    text.Text = label
-    text.TextColor3 = Color3.fromRGB(220, 220, 220)
-    text.TextXAlignment = Enum.TextXAlignment.Left
-    text.TextScaled = true
-    text.Font = Enum.Font.SourceSans
-    text.Parent = container
-    
-    local current = false
-    local function updateCheckbox()
-        if current then
-            checkbox.Text = "✓"
-            checkbox.TextColor3 = Color3.fromRGB(0, 255, 100)
-            checkbox.BorderColor3 = Color3.fromRGB(0, 255, 100)
-            checkbox.BackgroundColor3 = Color3.fromRGB(0, 50, 25)
+AimbotTab:CreateDropdown({
+    Name = "Цель",
+    Options = {"Head", "Torso"},
+    CurrentOption = "Head",
+    Callback = function(Option)
+        if Option == "Torso" then
+            Settings.AimBot.TargetPart = "UpperTorso"
         else
-            checkbox.Text = ""
-            checkbox.TextColor3 = Color3.fromRGB(0, 255, 100)
-            checkbox.BorderColor3 = Color3.fromRGB(150, 150, 170)
-            checkbox.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+            Settings.AimBot.TargetPart = "Head"
         end
     end
-    updateCheckbox()
-    
-    checkbox.MouseButton1Click:Connect(function()
-        current = not current
-        updateCheckbox()
-    end)
-    
-    text.MouseButton1Click:Connect(function()
-        current = not current
-        updateCheckbox()
-    end)
-    
-    return checkbox
+})
+
+-- ============================================
+-- ВКЛАДКА ESP
+-- ============================================
+local ESPTab = Window:CreateTab("👁️ ESP", 0)
+
+local ESPSection = ESPTab:CreateSection("Настройки ESP")
+
+ESPTab:CreateToggle({
+    Name = "ESP Total",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Enabled = Value
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Box ESP",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Box = Value
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Tracers (линии)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Tracers = Value
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Health Bar",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Health = Value
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Distance (дистанция)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.Distance = Value
+    end
+})
+
+ESPTab:CreateToggle({
+    Name = "Team Colors (цвет команды)",
+    CurrentValue = false,
+    Callback = function(Value)
+        Settings.ESP.TeamColor = Value
+    end
+})
+
+-- ============================================
+-- ВКЛАДКА УПРАВЛЕНИЯ
+-- ============================================
+local ControlTab = Window:CreateTab("⚙️ Управление", 0)
+
+local ControlSection = ControlTab:CreateSection("Управление скриптом")
+
+ControlTab:CreateButton({
+    Name = "OFF ALL (отключить всё)",
+    Callback = function()
+        Settings.AimBot.Enabled = false
+        Settings.AimBot.WallCheck = false
+        Settings.AimBot.TeamCheck = false
+        Settings.ESP.Enabled = false
+        Settings.ESP.Box = false
+        Settings.ESP.Tracers = false
+        Settings.ESP.Health = false
+        Settings.ESP.Distance = false
+        Settings.ESP.TeamColor = false
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Все функции отключены!",
+            Duration = 2
+        })
+    end
+})
+
+ControlTab:CreateButton({
+    Name = "!DESTROY! (удалить скрипт)",
+    Callback = function()
+        Rayfield:Destroy()
+        for _, v in pairs(game.CoreGui:GetChildren()) do
+            if v.Name == "Rayfield" or v.Name == "RyzenMobile" then
+                v:Destroy()
+            end
+        end
+    end
+})
+
+-- ============================================
+-- ОСНОВНАЯ ЛОГИКА (AIMBOT + ESP)
+-- ============================================
+
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+local function isAlive(plr)
+    local char = plr.Character
+    return char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0
 end
 
-local y = 5
-createLabel(scrollFrame, y, "AIMBOT")
-y = y + 30
-createCheckbox(scrollFrame, y, "Aimbot")
-y = y + 45
-createCheckbox(scrollFrame, y, "Wall Check")
-y = y + 45
-createCheckbox(scrollFrame, y, "Team Check")
-y = y + 60
-createLabel(scrollFrame, y, "ESP")
-y = y + 30
-createCheckbox(scrollFrame, y, "ESP Total")
-y = y + 45
-createCheckbox(scrollFrame, y, "Box ESP")
-y = y + 45
-createCheckbox(scrollFrame, y, "Tracers")
-y = y + 45
-createCheckbox(scrollFrame, y, "Health Bar")
-y = y + 45
-createCheckbox(scrollFrame, y, "Distance")
-y = y + 45
-createCheckbox(scrollFrame, y, "Team Colors")
-scrollFrame.CanvasSize = UDim2.new(0, 0, 0, y + 50)
+local function getTeamColor(plr)
+    if plr.Team and plr.Team.TeamColor then
+        return plr.Team.TeamColor.Color
+    end
+    return Color3.new(1, 1, 1)
+end
 
-local bottomFrame = Instance.new("Frame")
-bottomFrame.Size = UDim2.new(1, 0, 0, 60)
-bottomFrame.Position = UDim2.new(0, 0, 1, -60)
-bottomFrame.BackgroundTransparency = 1
-bottomFrame.Parent = MainFrame
+local function getPart(plr, partName)
+    if not plr.Character then return nil end
+    return plr.Character:FindFirstChild(partName)
+end
 
-local dividerBottom = Instance.new("Frame")
-dividerBottom.Size = UDim2.new(0.9, 0, 0, 2)
-dividerBottom.Position = UDim2.new(0.05, 0, 0, 0)
-dividerBottom.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-dividerBottom.BackgroundTransparency = 0.3
-dividerBottom.BorderSizePixel = 0
-dividerBottom.Parent = bottomFrame
+local function isVisible(origin, targetPos)
+    local ray = Ray.new(origin, (targetPos - origin).Unit * (targetPos - origin).Magnitude)
+    local hit = workspace:FindPartOnRay(ray, LocalPlayer.Character, false, true)
+    if hit then
+        return false
+    end
+    return true
+end
 
-local offAllBtn = Instance.new("TextButton")
-offAllBtn.Size = UDim2.new(0.43, 0, 0, 35)
-offAllBtn.Position = UDim2.new(0.04, 0, 0, 10)
-offAllBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
-offAllBtn.BackgroundTransparency = 0.2
-offAllBtn.BorderSizePixel = 2
-offAllBtn.BorderColor3 = Color3.fromRGB(255, 200, 0)
-offAllBtn.Text = "OFF ALL"
-offAllBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-offAllBtn.TextScaled = true
-offAllBtn.Font = Enum.Font.SourceSansBold
-offAllBtn.Parent = bottomFrame
+-- AIMBOT
+local function getClosestPlayerInFOV()
+    if not Settings.AimBot.Enabled then return nil end
+    
+    local closest = nil
+    local minDist = math.huge
+    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+    local cameraPos = Camera.CFrame.Position
 
-local offCorner = Instance.new("UICorner")
-offCorner.CornerRadius = UDim.new(0, 6)
-offCorner.Parent = offAllBtn
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        if Settings.AimBot.TeamCheck and plr.Team == LocalPlayer.Team then continue end
+        if not isAlive(plr) then continue end
 
-local destroyBtn = Instance.new("TextButton")
-destroyBtn.Size = UDim2.new(0.43, 0, 0, 35)
-destroyBtn.Position = UDim2.new(0.53, 0, 0, 10)
-destroyBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-destroyBtn.BackgroundTransparency = 0.2
-destroyBtn.BorderSizePixel = 2
-destroyBtn.BorderColor3 = Color3.fromRGB(255, 0, 0)
-destroyBtn.Text = "!DESTROY!"
-destroyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-destroyBtn.TextScaled = true
-destroyBtn.Font = Enum.Font.SourceSansBold
-destroyBtn.Parent = bottomFrame
+        local targetPart = getPart(plr, Settings.AimBot.TargetPart)
+        if not targetPart then continue end
 
-local destroyCorner = Instance.new("UICorner")
-destroyCorner.CornerRadius = UDim.new(0, 6)
-destroyCorner.Parent = destroyBtn
+        if Settings.AimBot.WallCheck then
+            if not isVisible(cameraPos, targetPart.Position) then
+                continue
+            end
+        end
 
-destroyBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    Overlay.Visible = false
-    ScreenGui:Destroy()
+        local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+        if not onScreen then continue end
+
+        local dist = (Vector2.new(screenPos.X, screenPos.Y) - center).Magnitude
+        local fovLimit = (Settings.AimBot.FOV / 2) * (Camera.ViewportSize.X / 100)
+        if dist < fovLimit and dist < minDist then
+            minDist = dist
+            closest = plr
+        end
+    end
+    return closest
+end
+
+local function smoothAim(targetPos)
+    local current = Camera.CFrame.Position
+    local targetCF = CFrame.new(current, targetPos)
+    Camera.CFrame = Camera.CFrame:Lerp(targetCF, Settings.AimBot.Smoothness)
+end
+
+RunService.RenderStepped:Connect(function()
+    if not Settings.AimBot.Enabled then return end
+    
+    local target = getClosestPlayerInFOV()
+    if target then
+        local part = getPart(target, Settings.AimBot.TargetPart)
+        if part then
+            smoothAim(part.Position)
+        end
+    end
 end)
 
-local menuOpen = false
+-- ESP
+local drawingObjects = {}
+
+local function clearDrawings()
+    for _, obj in pairs(drawingObjects) do
+        if obj and obj.Remove then
+            obj:Remove()
+        end
+    end
+    drawingObjects = {}
+end
+
+local function createDrawing(type, props)
+    local obj = Drawing.new(type)
+    for k, v in pairs(props) do
+        obj[k] = v
+    end
+    table.insert(drawingObjects, obj)
+    return obj
+end
+
+RunService.RenderStepped:Connect(function()
+    clearDrawings()
+    
+    if not Settings.ESP.Enabled then return end
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        if not isAlive(plr) then continue end
+
+        local char = plr.Character
+        local head = char:FindFirstChild("Head")
+        if not head then continue end
+
+        local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+        if not onScreen then continue end
+
+        local teamCol = getTeamColor(plr)
+        local espColor = Settings.ESP.TeamColor and teamCol or Color3.new(1, 1, 1)
+
+        if Settings.ESP.Box then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local bottomPos, _ = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+                local topPos, _ = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
+                local height = topPos.Y - bottomPos.Y
+                local width = height * 0.4
+                local x = headPos.X - width/2
+                local y = headPos.Y
+
+                createDrawing("Square", {
+                    Position = Vector2.new(x, y),
+                    Size = Vector2.new(width, height),
+                    Thickness = 2,
+                    Color = espColor,
+                    Filled = false,
+                    Visible = true
+                })
+            end
+        end
+
+        if Settings.ESP.Tracers then
+            local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+            createDrawing("Line", {
+                From = center,
+                To = Vector2.new(headPos.X, headPos.Y),
+                Thickness = 2,
+                Color = espColor,
+                Visible = true
+            })
+        end
+
+        if Settings.ESP.Health then
+            local hum = char:FindFirstChild("Humanoid")
+            if hum then
+                local healthPercent = hum.Health / hum.MaxHealth
+                local barWidth = 40
+                local barX = headPos.X - barWidth/2
+                local barY = headPos.Y - 35
+                
+                createDrawing("Line", {
+                    From = Vector2.new(barX, barY),
+                    To = Vector2.new(barX + barWidth, barY),
+                    Thickness = 4,
+                    Color = Color3.new(0.2, 0.2, 0.2),
+                    Visible = true
+                })
+                createDrawing("Line", {
+                    From = Vector2.new(barX, barY),
+                    To = Vector2.new(barX + barWidth * healthPercent, barY),
+                    Thickness = 4,
+                    Color = Color3.new(1 - healthPercent, healthPercent, 0),
+                    Visible = true
+                })
+            end
+        end
+
+        if Settings.ESP.Distance then
+            local dist = math.floor((Camera.CFrame.Position - head.Position).Magnitude)
+            createDrawing("Text", {
+                Position = Vector2.new(headPos.X, headPos.Y + 30),
+                Text = dist .. "m",
+                Size = 14,
+                Color = Color3.new(1, 1, 1),
+                Center = true,
+                Visible = true
+            })
+        end
+    end
+end)
+
+game:GetService("BindableEvent").Destroying:Connect(clearDrawings)
