@@ -1,5 +1,5 @@
 -- RYZEN AIMBOT + ULTRA ESP НА RAYFIELD
--- ФИОЛЕТОВАЯ ТЕМА + FOV ВИЗУАЛИЗАЦИЯ + ПРИЦЕЛЫ
+-- ФИОЛЕТОВАЯ ТЕМА + FOV ВИЗУАЛИЗАЦИЯ + НАСТРОЙКА ЦВЕТА
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -43,17 +43,10 @@ local Settings = {
         TeamColor = false,
         StatsBox = false,
         Rainbow = false
-    },
-    Crosshair = {
-        Enabled = false,
-        Style = "Классический",
-        Color = Color3.fromRGB(0, 255, 0),
-        Size = 20,
-        Thickness = 2
     }
 }
 
--- СОЗДАНИЕ ОКНА RAYFIELD
+-- СОЗДАНИЕ ОКНА RAYFIELD С ФИОЛЕТОВОЙ ТЕМОЙ
 local Window = Rayfield:CreateWindow({
     Name = "🤑 Ryzen Aimbot Ultra",
     Icon = 0,
@@ -65,6 +58,25 @@ local Window = Rayfield:CreateWindow({
         FileName = "RyzenUltra"
     }
 })
+
+-- ПРИМЕНЯЕМ ФИОЛЕТОВУЮ ТЕМУ К GUI
+local function applyPurpleTheme()
+    for _, v in pairs(game.CoreGui:GetDescendants()) do
+        if v:IsA("Frame") or v:IsA("TextLabel") or v:IsA("TextButton") or v:IsA("ImageLabel") then
+            if v.Name == "Background" or v.Name == "MainFrame" then
+                v.BackgroundColor3 = PurpleTheme.Background
+            end
+            if v.Name == "Accent" or v.Name == "Glow" then
+                v.BackgroundColor3 = PurpleTheme.Accent
+            end
+            if v:IsA("TextLabel") or v:IsA("TextButton") then
+                if v.TextColor3 == Color3.fromRGB(255, 255, 255) then
+                    v.TextColor3 = PurpleTheme.Text
+                end
+            end
+        end
+    end
+end
 
 -- ============================================
 -- ВКЛАДКА AIMBOT
@@ -130,96 +142,13 @@ AimbotTab:CreateDropdown({
 })
 
 -- ============================================
--- ВКЛАДКА "CROSSHAIR" (ПРИЦЕЛ)
--- ============================================
-local CrosshairTab = Window:CreateTab("🎯 Crosshair", 0)
-
-CrosshairTab:CreateSection("Настройки прицела")
-
-CrosshairTab:CreateToggle({
-    Name = "Включить прицел",
-    CurrentValue = false,
-    Callback = function(Value)
-        Settings.Crosshair.Enabled = Value
-    end
-})
-
-CrosshairTab:CreateDropdown({
-    Name = "Стиль прицела",
-    Options = {"Классический", "Точка", "Круг", "Крест", "X", "Стрелка", "Ромб"},
-    CurrentOption = "Классический",
-    Callback = function(Option)
-        Settings.Crosshair.Style = Option
-    end
-})
-
-CrosshairTab:CreateSlider({
-    Name = "Размер прицела",
-    Range = {5, 50},
-    Increment = 1,
-    Suffix = "px",
-    CurrentValue = 20,
-    Callback = function(Value)
-        Settings.Crosshair.Size = Value
-    end
-})
-
-CrosshairTab:CreateSlider({
-    Name = "Толщина прицела",
-    Range = {1, 5},
-    Increment = 1,
-    Suffix = "px",
-    CurrentValue = 2,
-    Callback = function(Value)
-        Settings.Crosshair.Thickness = Value
-    end
-})
-
--- ============================================
--- ВКЛАДКА "CROSSHAIR COLOR"
--- ============================================
-local CrosshairColorTab = Window:CreateTab("🎨 Crosshair Color", 0)
-
-CrosshairColorTab:CreateSection("Выберите цвет прицела")
-
-local crosshairColors = {
-    {"Зелёный", Color3.fromRGB(0, 255, 0)},
-    {"Красный", Color3.fromRGB(255, 0, 0)},
-    {"Синий", Color3.fromRGB(0, 0, 255)},
-    {"Жёлтый", Color3.fromRGB(255, 255, 0)},
-    {"Фиолетовый", Color3.fromRGB(255, 0, 255)},
-    {"Голубой", Color3.fromRGB(0, 255, 255)},
-    {"Оранжевый", Color3.fromRGB(255, 165, 0)},
-    {"Розовый", Color3.fromRGB(255, 105, 180)},
-    {"Белый", Color3.fromRGB(255, 255, 255)},
-    {"Чёрный", Color3.fromRGB(0, 0, 0)}
-}
-
-for _, colorData in ipairs(crosshairColors) do
-    local colorName = colorData[1]
-    local colorValue = colorData[2]
-    
-    CrosshairColorTab:CreateButton({
-        Name = colorName .. " ●",
-        Callback = function()
-            Settings.Crosshair.Color = colorValue
-            Rayfield:Notify({
-                Title = "Цвет прицела",
-                Content = "Выбран: " .. colorName,
-                Duration = 1.5
-            })
-        end
-    })
-end
-
--- ============================================
--- ВКЛАДКА "FOV COLOR"
+-- ВКЛАДКА "FOV COLOR" (ВЫБОР ЦВЕТА)
 -- ============================================
 local FOVColorTab = Window:CreateTab("🎨 FOV Color", 0)
 
 FOVColorTab:CreateSection("Выберите цвет для FOV")
 
-local fovColors = {
+local colors = {
     {"Красный", Color3.fromRGB(255, 0, 0)},
     {"Зелёный", Color3.fromRGB(0, 255, 0)},
     {"Синий", Color3.fromRGB(0, 0, 255)},
@@ -231,7 +160,7 @@ local fovColors = {
     {"Белый", Color3.fromRGB(255, 255, 255)}
 }
 
-for _, colorData in ipairs(fovColors) do
+for _, colorData in ipairs(colors) do
     local colorName = colorData[1]
     local colorValue = colorData[2]
     
@@ -347,7 +276,6 @@ ControlTab:CreateButton({
         Settings.ESP.TeamColor = false
         Settings.ESP.StatsBox = false
         Settings.ESP.Rainbow = false
-        Settings.Crosshair.Enabled = false
         Rayfield:Notify({
             Title = "Ryzen System",
             Content = "Все функции отключены!",
@@ -502,189 +430,6 @@ end
 RunService.RenderStepped:Connect(drawFOV)
 
 -- ============================================
--- РИСОВАНИЕ ПРИЦЕЛА
--- ============================================
-local crosshairObjects = {}
-
-local function clearCrosshair()
-    for _, obj in pairs(crosshairObjects) do
-        if obj and obj.Remove then
-            obj:Remove()
-        end
-    end
-    crosshairObjects = {}
-end
-
-local function createCrosshairObject(type, props)
-    local obj = Drawing.new(type)
-    for k, v in pairs(props) do
-        obj[k] = v
-    end
-    table.insert(crosshairObjects, obj)
-    return obj
-end
-
-local function drawCrosshair()
-    clearCrosshair()
-    
-    if not Settings.Crosshair.Enabled then return end
-    
-    local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    local size = Settings.Crosshair.Size
-    local thick = Settings.Crosshair.Thickness
-    local color = Settings.Crosshair.Color
-    local style = Settings.Crosshair.Style
-    
-    -- КЛАССИЧЕСКИЙ (+)
-    if style == "Классический" then
-        -- Горизонтальная линия (левая)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X - size, center.Y),
-            To = Vector2.new(center.X - thick/2, center.Y),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        -- Горизонтальная линия (правая)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X + thick/2, center.Y),
-            To = Vector2.new(center.X + size, center.Y),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        -- Вертикальная линия (верхняя)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X, center.Y - size),
-            To = Vector2.new(center.X, center.Y - thick/2),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        -- Вертикальная линия (нижняя)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X, center.Y + thick/2),
-            To = Vector2.new(center.X, center.Y + size),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        
-    -- ТОЧКА
-    elseif style == "Точка" then
-        createCrosshairObject("Circle", {
-            Position = center,
-            Radius = size/3,
-            Thickness = thick,
-            Color = color,
-            Filled = true,
-            Visible = true
-        })
-        
-    -- КРУГ
-    elseif style == "Круг" then
-        createCrosshairObject("Circle", {
-            Position = center,
-            Radius = size/1.5,
-            Thickness = thick,
-            Color = color,
-            Filled = false,
-            Visible = true
-        })
-        -- Точка в центре
-        createCrosshairObject("Circle", {
-            Position = center,
-            Radius = 2,
-            Thickness = thick,
-            Color = color,
-            Filled = true,
-            Visible = true
-        })
-        
-    -- КРЕСТ (X)
-    elseif style == "Крест" then
-        local offset = size * 0.7
-        -- Линия 1 (\)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X - offset, center.Y - offset),
-            To = Vector2.new(center.X + offset, center.Y + offset),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        -- Линия 2 (/)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X + offset, center.Y - offset),
-            To = Vector2.new(center.X - offset, center.Y + offset),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        
-    -- СТРЕЛКА (↑)
-    elseif style == "Стрелка" then
-        -- Вертикальная линия
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X, center.Y + size/2),
-            To = Vector2.new(center.X, center.Y - size/2),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        -- Верхняя стрелка (левая)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X - size/3, center.Y - size/3),
-            To = Vector2.new(center.X, center.Y - size/2),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        -- Верхняя стрелка (правая)
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X + size/3, center.Y - size/3),
-            To = Vector2.new(center.X, center.Y - size/2),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        
-    -- РОМБ (◇)
-    elseif style == "Ромб" then
-        local s = size/2
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X, center.Y - s),
-            To = Vector2.new(center.X + s, center.Y),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X + s, center.Y),
-            To = Vector2.new(center.X, center.Y + s),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X, center.Y + s),
-            To = Vector2.new(center.X - s, center.Y),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-        createCrosshairObject("Line", {
-            From = Vector2.new(center.X - s, center.Y),
-            To = Vector2.new(center.X, center.Y - s),
-            Thickness = thick,
-            Color = color,
-            Visible = true
-        })
-    end
-end
-
-RunService.RenderStepped:Connect(drawCrosshair)
-
--- ============================================
 -- ESP С СИНИМ БОКСОМ И СТАТИСТИКОЙ
 -- ============================================
 
@@ -708,6 +453,7 @@ local function createDrawing(type, props)
     return obj
 end
 
+-- ФУНКЦИЯ ДЛЯ РИСОВАНИЯ СИНЕГО БОКСА СО СТАТИСТИКОЙ
 local function drawStatsBox(plr, headPos, espColor)
     local char = plr.Character
     if not char then return end
@@ -717,4 +463,237 @@ local function drawStatsBox(plr, headPos, espColor)
     if not root or not hum then return end
     
     local health = math.floor(hum.Health)
-    local maxHealth =
+    local maxHealth = math.floor(hum.MaxHealth)
+    local teamName = getTeamName(plr)
+    local teamColor = getTeamColor(plr)
+    local playerName = plr.Name
+    
+    local bottomPos, _ = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+    local topPos, _ = Camera:WorldToViewportPoint(headPos)
+    local height = (topPos.Y - bottomPos.Y) + 30
+    local width = height * 0.45
+    local x = headPos.X - width/2
+    local y = topPos.Y - 20
+    
+    local boxColor = Color3.fromRGB(30, 144, 255)
+    local cornerRadius = 8
+    
+    createDrawing("Line", {
+        From = Vector2.new(x + cornerRadius, y),
+        To = Vector2.new(x + width - cornerRadius, y),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x + cornerRadius, y + height),
+        To = Vector2.new(x + width - cornerRadius, y + height),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x, y + cornerRadius),
+        To = Vector2.new(x, y + height - cornerRadius),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x + width, y + cornerRadius),
+        To = Vector2.new(x + width, y + height - cornerRadius),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x, y + cornerRadius),
+        To = Vector2.new(x + cornerRadius, y),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x + width - cornerRadius, y),
+        To = Vector2.new(x + width, y + cornerRadius),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x, y + height - cornerRadius),
+        To = Vector2.new(x + cornerRadius, y + height),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Line", {
+        From = Vector2.new(x + width - cornerRadius, y + height),
+        To = Vector2.new(x + width, y + height - cornerRadius),
+        Thickness = 2,
+        Color = boxColor,
+        Visible = true
+    })
+    
+    createDrawing("Square", {
+        Position = Vector2.new(x + 1, y + 1),
+        Size = Vector2.new(width - 2, height - 2),
+        Thickness = 0,
+        Color = Color3.fromRGB(0, 0, 50),
+        Filled = true,
+        Visible = true,
+        Transparency = 0.6
+    })
+    
+    local textX = x + 5
+    local textY = y + 5
+    
+    createDrawing("Text", {
+        Position = Vector2.new(headPos.X, y - 18),
+        Text = "🔴 " .. playerName,
+        Size = 14,
+        Color = Color3.fromRGB(255, 50, 50),
+        Center = true,
+        Visible = true,
+        Outline = true,
+        OutlineColor = Color3.new(0, 0, 0)
+    })
+    
+    local healthColor = Color3.fromRGB(0, 255, 100)
+    createDrawing("Text", {
+        Position = Vector2.new(textX, textY + 5),
+        Text = "🟢 Health: " .. health .. "/" .. maxHealth,
+        Size = 13,
+        Color = healthColor,
+        Center = false,
+        Visible = true,
+        Outline = true,
+        OutlineColor = Color3.new(0, 0, 0)
+    })
+    
+    local teamTextColor = teamColor
+    createDrawing("Text", {
+        Position = Vector2.new(textX, textY + 25),
+        Text = "🔵 Team: " .. teamName,
+        Size = 13,
+        Color = teamTextColor,
+        Center = false,
+        Visible = true,
+        Outline = true,
+        OutlineColor = Color3.new(0, 0, 0)
+    })
+    
+    local dist = math.floor((Camera.CFrame.Position - headPos.Position).Magnitude)
+    createDrawing("Text", {
+        Position = Vector2.new(textX, textY + 45),
+        Text = "📏 Distance: " .. dist .. "m",
+        Size = 13,
+        Color = Color3.new(1, 1, 1),
+        Center = false,
+        Visible = true,
+        Outline = true,
+        OutlineColor = Color3.new(0, 0, 0)
+    })
+end
+
+-- ОСНОВНОЙ ЦИКЛ ESP
+RunService.RenderStepped:Connect(function()
+    clearDrawings()
+    
+    if not Settings.ESP.Enabled then return end
+    
+    local time = tick()
+    local rainbowColor = getRainbowColor(time)
+
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr == LocalPlayer then continue end
+        if not isAlive(plr) then continue end
+
+        local char = plr.Character
+        local head = char:FindFirstChild("Head")
+        if not head then continue end
+
+        local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+        if not onScreen then continue end
+
+        local teamCol = getTeamColor(plr)
+        local espColor = Settings.ESP.TeamColor and teamCol or Color3.new(1, 1, 1)
+        if Settings.ESP.Rainbow then
+            espColor = rainbowColor
+        end
+
+        if Settings.ESP.StatsBox then
+            drawStatsBox(plr, headPos, espColor)
+        end
+
+        if Settings.ESP.Box then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local bottomPos, _ = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+                local topPos, _ = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1, 0))
+                local height = topPos.Y - bottomPos.Y
+                local width = height * 0.4
+                local x = headPos.X - width/2
+                local y = headPos.Y
+
+                createDrawing("Square", {
+                    Position = Vector2.new(x, y),
+                    Size = Vector2.new(width, height),
+                    Thickness = 2,
+                    Color = espColor,
+                    Filled = false,
+                    Visible = true
+                })
+            end
+        end
+
+        if Settings.ESP.Tracers then
+            local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+            
+            createDrawing("Line", {
+                From = center,
+                To = Vector2.new(headPos.X, headPos.Y),
+                Thickness = 2,
+                Color = espColor,
+                Visible = true
+            })
+        end
+
+        if Settings.ESP.Health then
+            local hum = char:FindFirstChild("Humanoid")
+            if hum then
+                local healthPercent = hum.Health / hum.MaxHealth
+                local barWidth = 40
+                local barX = headPos.X - barWidth/2
+                local barY = headPos.Y - 35
+                
+                createDrawing("Line", {
+                    From = Vector2.new(barX, barY),
+                    To = Vector2.new(barX + barWidth, barY),
+                    Thickness = 4,
+                    Color = Color3.new(0.2, 0.2, 0.2),
+                    Visible = true
+                })
+                
+                local healthColor = Color3.new(1 - healthPercent, healthPercent, 0)
+                createDrawing("Line", {
+                    From = Vector2.new(barX, barY),
+                    To = Vector2.new(barX + barWidth * healthPercent, barY),
+                    Thickness = 4,
+                    Color = healthColor,
+                    Visible = true
+                })
+            end
+        end
+
+        if Settings.ESP.Distance then
+            local dist = math.floor((Camera.CFrame.Position - head.Position).Magnitude)
+            createDrawing("Text", {
+      
