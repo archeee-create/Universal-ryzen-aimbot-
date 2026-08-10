@@ -1,0 +1,527 @@
+--[[
+    FTAP All-In-One (Rayfield)
+    Функции: AntiGrab, SuperStrength, KickAura, AntiKill, AntiPaint, Ragdoll,
+             Poison/Fire/Kill Grab, SuperThrow, FireAll, PlotKicker, Invincibility, Reach,
+             ESP, AutoFarm, SpeedHack
+    Управление: LeftControl для открытия меню
+--]]
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
+-- ========== ЗАГРУЗКА И СОЗДАНИЕ ОКНА ==========
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHesiix/Rayfield/main/source.lua"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "✦ FTAP All-In-One ✦",
+    LoadingTitle = "Загрузка...",
+    LoadingSubtitle = "by Ryzen",
+    ConfigurationSaving = {
+        Enabled = true,
+        FileName = "FTAP_AIO_Config"
+    },
+    Discord = {
+        Enabled = false
+    },
+    KeySystem = false
+})
+
+-- ========== АНТИ-AFK ==========
+local function AntiAFK()
+    local vu = game:GetService("VirtualUser")
+    LocalPlayer.Idled:Connect(function()
+        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+        wait(1)
+        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+    end)
+end
+AntiAFK()
+
+-- ========== Elysium API TAB ==========
+local ElysiumTab = Window:CreateTab("Elysium API")
+local ElysiumSection = ElysiumTab:CreateSection("Elysium Module")
+
+local AntiGrab = false
+local SuperStrength = false
+local KickAura = false
+
+ElysiumTab:CreateToggle({
+    Name = "🛡️ Анти-граб (AntiGrab)",
+    CurrentValue = false,
+    Flag = "Elysium_AntiGrab",
+    Callback = function(Value)
+        AntiGrab = Value
+        if AntiGrab and LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+        end
+    end
+})
+
+ElysiumTab:CreateToggle({
+    Name = "💪 Супер-сила (SuperStrength)",
+    CurrentValue = false,
+    Flag = "Elysium_SuperStrength",
+    Callback = function(Value)
+        SuperStrength = Value
+        if SuperStrength and LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid.MaxHealth = math.huge
+            LocalPlayer.Character.Humanoid.Health = math.huge
+        end
+    end
+})
+
+ElysiumTab:CreateToggle({
+    Name = "🌀 Кик-аура (KickAura)",
+    CurrentValue = false,
+    Flag = "Elysium_KickAura",
+    Callback = function(Value)
+        KickAura = Value
+        if KickAura then
+            spawn(function()
+                while KickAura do
+                    wait(0.3)
+                    for _, Player in pairs(Players:GetPlayers()) do
+                        if Player ~= LocalPlayer then
+                            local Char = Player.Character
+                            if Char and Char:FindFirstChild("HumanoidRootPart") then
+                                local dist = (LocalPlayer.Character.HumanoidRootPart.Position - Char.HumanoidRootPart.Position).Magnitude
+                                if dist < 20 then
+                                    Char.HumanoidRootPart.Velocity = Vector3.new(0, 80, 0)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+-- ========== Verbal Hub v3 TAB ==========
+local VerbalTab = Window:CreateTab("Verbal Hub v3")
+local VerbalSection = VerbalTab:CreateSection("Verbal Hub")
+
+local AntiKill = false
+local AntiPaint = false
+local PermanentRagdoll = false
+
+VerbalTab:CreateToggle({
+    Name = "🛡️ Анти-убийство",
+    CurrentValue = false,
+    Flag = "Verbal_AntiKill",
+    Callback = function(Value)
+        AntiKill = Value
+    end
+})
+
+VerbalTab:CreateToggle({
+    Name = "🎨 Анти-покраска",
+    CurrentValue = false,
+    Flag = "Verbal_AntiPaint",
+    Callback = function(Value)
+        AntiPaint = Value
+    end
+})
+
+VerbalTab:CreateToggle({
+    Name = "🧟 Постоянный регдолл",
+    CurrentValue = false,
+    Flag = "Verbal_PermanentRagdoll",
+    Callback = function(Value)
+        PermanentRagdoll = Value
+        if PermanentRagdoll and LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
+        elseif LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Standing)
+        end
+    end
+})
+
+VerbalTab:CreateButton({
+    Name = "👊 Блобман-кик (всех)",
+    Callback = function()
+        for _, Player in pairs(Players:GetPlayers()) do
+            if Player ~= LocalPlayer then
+                local Char = Player.Character
+                if Char and Char:FindFirstChild("Humanoid") then
+                    Char.Humanoid:BreakJoints()
+                end
+            end
+        end
+    end
+})
+
+-- ========== Name Hub TAB ==========
+local NameHubTab = Window:CreateTab("Name Hub")
+local NameHubSection = NameHubTab:CreateSection("Name Hub")
+
+local PoisonGrab = false
+local FireGrab = false
+local KillGrab = false
+local SuperThrow = false
+
+NameHubTab:CreateToggle({
+    Name = "☠️ Ядовитый граб",
+    CurrentValue = false,
+    Flag = "NameHub_PoisonGrab",
+    Callback = function(Value)
+        PoisonGrab = Value
+        if PoisonGrab then
+            spawn(function()
+                while PoisonGrab do
+                    wait(0.5)
+                    for _, Player in pairs(Players:GetPlayers()) do
+                        if Player ~= LocalPlayer then
+                            local Char = Player.Character
+                            if Char and Char:FindFirstChild("Humanoid") then
+                                Char.Humanoid.Health = Char.Humanoid.Health - 5
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+NameHubTab:CreateToggle({
+    Name = "🔥 Огненный граб",
+    CurrentValue = false,
+    Flag = "NameHub_FireGrab",
+    Callback = function(Value)
+        FireGrab = Value
+        if FireGrab then
+            spawn(function()
+                while FireGrab do
+                    wait(0.5)
+                    for _, Player in pairs(Players:GetPlayers()) do
+                        if Player ~= LocalPlayer then
+                            local Char = Player.Character
+                            if Char then
+                                local Fire = Instance.new("Fire")
+                                Fire.Parent = Char
+                                Fire.Size = 8
+                                Fire.Heat = 50
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+NameHubTab:CreateToggle({
+    Name = "💀 Убийственный граб",
+    CurrentValue = false,
+    Flag = "NameHub_KillGrab",
+    Callback = function(Value)
+        KillGrab = Value
+        if KillGrab then
+            spawn(function()
+                while KillGrab do
+                    wait(0.3)
+                    for _, Player in pairs(Players:GetPlayers()) do
+                        if Player ~= LocalPlayer then
+                            local Char = Player.Character
+                            if Char and Char:FindFirstChild("Humanoid") then
+                                Char.Humanoid.Health = 0
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+NameHubTab:CreateToggle({
+    Name = "🚀 Супер-бросок",
+    CurrentValue = false,
+    Flag = "NameHub_SuperThrow",
+    Callback = function(Value)
+        SuperThrow = Value
+    end
+})
+
+-- ========== FTAP Hub TAB ==========
+local FTAPHubTab = Window:CreateTab("FTAP Hub")
+local FTAPHubSection = FTAPHubTab:CreateSection("FTAP Hub")
+
+local FireAll = false
+local AutoSpawnFire = false
+local PlotKicker = false
+local Invincibility = false
+local Reach = false
+
+FTAPHubTab:CreateToggle({
+    Name = "🔥 Поджечь всех",
+    CurrentValue = false,
+    Flag = "FTAP_FireAll",
+    Callback = function(Value)
+        FireAll = Value
+        if FireAll then
+            for _, Player in pairs(Players:GetPlayers()) do
+                if Player ~= LocalPlayer then
+                    local Char = Player.Character
+                    if Char then
+                        local Fire = Instance.new("Fire")
+                        Fire.Parent = Char
+                        Fire.Size = 10
+                        Fire.Heat = 100
+                    end
+                end
+            end
+        end
+    end
+})
+
+FTAPHubTab:CreateToggle({
+    Name = "🔥 Авто-спавн огня",
+    CurrentValue = false,
+    Flag = "FTAP_AutoSpawnFire",
+    Callback = function(Value)
+        AutoSpawnFire = Value
+        if AutoSpawnFire then
+            spawn(function()
+                while AutoSpawnFire do
+                    wait(1)
+                    local Fire = Instance.new("Fire")
+                    Fire.Parent = workspace
+                    Fire.Size = 10
+                    Fire.Heat = 100
+                end
+            end)
+        end
+    end
+})
+
+FTAPHubTab:CreateToggle({
+    Name = "👢 Плот-кикер",
+    CurrentValue = false,
+    Flag = "FTAP_PlotKicker",
+    Callback = function(Value)
+        PlotKicker = Value
+        if PlotKicker then
+            spawn(function()
+                while PlotKicker do
+                    wait(0.3)
+                    for _, Player in pairs(Players:GetPlayers()) do
+                        if Player ~= LocalPlayer then
+                            local Char = Player.Character
+                            if Char and Char:FindFirstChild("HumanoidRootPart") then
+                                Char.HumanoidRootPart.Velocity = Vector3.new(0, 150, 0)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+FTAPHubTab:CreateToggle({
+    Name = "🛡️ Бессмертие",
+    CurrentValue = false,
+    Flag = "FTAP_Invincibility",
+    Callback = function(Value)
+        Invincibility = Value
+        if Invincibility and LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid.MaxHealth = math.huge
+            LocalPlayer.Character.Humanoid.Health = math.huge
+        end
+    end
+})
+
+FTAPHubTab:CreateToggle({
+    Name = "🦾 Увеличенный радиус граба",
+    CurrentValue = false,
+    Flag = "FTAP_Reach",
+    Callback = function(Value)
+        Reach = Value
+    end
+})
+
+-- ========== RBLX Database TAB ==========
+local RBLXTab = Window:CreateTab("RBLX Database")
+local RBLXSection = RBLXTab:CreateSection("RBLX Database")
+
+local ESPEnabled = false
+local AutoFarmEnabled = false
+local SpeedHack = false
+
+RBLXTab:CreateToggle({
+    Name = "👁️ ESP",
+    CurrentValue = false,
+    Flag = "RBLX_ESP",
+    Callback = function(Value)
+        ESPEnabled = Value
+        if ESPEnabled then
+            EnableESP()
+        else
+            DisableESP()
+        end
+    end
+})
+
+RBLXTab:CreateToggle({
+    Name = "🤖 Авто-фарм",
+    CurrentValue = false,
+    Flag = "RBLX_AutoFarm",
+    Callback = function(Value)
+        AutoFarmEnabled = Value
+        if AutoFarmEnabled then
+            spawn(function()
+                while AutoFarmEnabled do
+                    wait(1)
+                    if LocalPlayer.Character then
+                        LocalPlayer.Character.Humanoid.Health = 100
+                        LocalPlayer.Character.Humanoid.WalkSpeed = 50
+                    end
+                end
+            end)
+        end
+    end
+})
+
+RBLXTab:CreateToggle({
+    Name = "💨 Скорость (Speed Hack)",
+    CurrentValue = false,
+    Flag = "RBLX_SpeedHack",
+    Callback = function(Value)
+        SpeedHack = Value
+        if SpeedHack and LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid.WalkSpeed = 100
+        elseif LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid.WalkSpeed = 16
+        end
+    end
+})
+
+-- ========== Настройки TAB ==========
+local SettingsTab = Window:CreateTab("Настройки")
+local SettingsSection = SettingsTab:CreateSection("Ползунки")
+
+SettingsTab:CreateSlider({
+    Name = "Скорость ходьбы",
+    Range = {16, 200},
+    Increment = 1,
+    Suffix = "stud/s",
+    CurrentValue = 16,
+    Flag = "WalkSpeed",
+    Callback = function(Value)
+        if LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid.WalkSpeed = Value
+        end
+    end
+})
+
+SettingsTab:CreateSlider({
+    Name = "Сила прыжка",
+    Range = {50, 300},
+    Increment = 1,
+    Suffix = "stud",
+    CurrentValue = 50,
+    Flag = "JumpPower",
+    Callback = function(Value)
+        if LocalPlayer.Character then
+            LocalPlayer.Character.Humanoid.JumpPower = Value
+        end
+    end
+})
+
+-- ========== ESP ==========
+local ESPObjects = {}
+
+local function EnableESP()
+    for _, Player in pairs(Players:GetPlayers()) do
+        if Player ~= LocalPlayer then
+            CreateESP(Player)
+        end
+    end
+end
+
+local function DisableESP()
+    for Player, Objects in pairs(ESPObjects) do
+        if Objects.Billboard then
+            Objects.Billboard:Destroy()
+        end
+        ESPObjects[Player] = nil
+    end
+end
+
+local function CreateESP(Player)
+    if not Player.Character then return end
+    local Billboard = Instance.new("BillboardGui")
+    Billboard.Size = UDim2.new(0, 200, 0, 40)
+    Billboard.StudsOffset = Vector3.new(0, 3, 0)
+    Billboard.AlwaysOnTop = true
+    Billboard.MaxDistance = 300
+    Billboard.Parent = Player.Character
+
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, 0, 1, 0)
+    Frame.BackgroundTransparency = 0.5
+    Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Frame.BorderSizePixel = 1
+    Frame.Parent = Billboard
+
+    local NameLabel = Instance.new("TextLabel")
+    NameLabel.Size = UDim2.new(1, 0, 0, 20)
+    NameLabel.Position = UDim2.new(0, 0, 0, 10)
+    NameLabel.BackgroundTransparency = 1
+    NameLabel.Text = Player.Name
+    NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    NameLabel.TextScaled = true
+    NameLabel.Font = Enum.Font.GothamBold
+    NameLabel.Parent = Frame
+
+    ESPObjects[Player] = {
+        Billboard = Billboard
+    }
+end
+
+Players.PlayerAdded:Connect(function(Player)
+    Player.CharacterAdded:Connect(function()
+        wait(0.5)
+        if ESPEnabled then
+            CreateESP(Player)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(Player)
+    if ESPObjects[Player] then
+        if ESPObjects[Player].Billboard then
+            ESPObjects[Player].Billboard:Destroy()
+        end
+        ESPObjects[Player] = nil
+    end
+end)
+
+for _, Player in pairs(Players:GetPlayers()) do
+    if Player ~= LocalPlayer then
+        Player.CharacterAdded:Connect(function()
+            wait(0.5)
+            if ESPEnabled then
+                CreateESP(Player)
+            end
+        end)
+    end
+end
+
+-- ========== ГОРЯЧАЯ КЛАВИША ==========
+UserInputService.InputBegan:Connect(function(Input, Processed)
+    if Processed then return end
+    if Input.KeyCode == Enum.KeyCode.LeftControl then
+        Window:ToggleVisibility()
+    end
+end)
+
+print("✦ FTAP All-In-One Script загружен!")
+print("Нажми LeftControl для открытия меню")
