@@ -1,0 +1,109 @@
+-- KavoUI Silent Aim (без loadstring)
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local VirtualInput = game:GetService("VirtualInputManager")
+local Camera = workspace.CurrentCamera
+
+local Window = Kavo.CreateLib("✦ Silent Aim ✦", "DarkTheme")
+
+local AimState = false
+local AimFOV = 45
+local AimRange = 50
+
+local FOVCircle = Instance.new("Frame")
+FOVCircle.Size = UDim2.new(0, 100, 0, 100)
+FOVCircle.Position = UDim2.new(0.5, -50, 0.5, -50)
+FOVCircle.BackgroundTransparency = 0.85
+FOVCircle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+FOVCircle.BorderSizePixel = 0
+FOVCircle.Visible = false
+FOVCircle.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local FOVCorner = Instance.new("UICorner")
+FOVCorner.CornerRadius = UDim.new(1, 0)
+FOVCorner.Parent = FOVCircle
+
+local FOVStroke = Instance.new("UIStroke")
+FOVStroke.Color = Color3.fromRGB(255, 0, 0)
+FOVStroke.Thickness = 2
+FOVStroke.Transparency = 0.3
+FOVStroke.Parent = FOVCircle
+
+local AimTab = Window:NewTab("Silent Aim")
+local AimSection = AimTab:NewSection("Настройки")
+
+AimSection:NewToggle("Silent Aim", "Вкл/Выкл", function(Value)
+    AimState = Value
+    FOVCircle.Visible = Value
+end)
+
+AimSection:NewSlider("FOV", "Угол обзора", 5, 180, 45, function(Value)
+    AimFOV = Value
+    local size = AimFOV * 2.5
+    FOVCircle.Size = UDim2.new(0, size, 0, size)
+    FOVCircle.Position = UDim2.new(0.5, -size/2, 0.5, -size/2)
+end)
+
+AimSection:NewSlider("Дальность хвата", "Максимальная дистанция", 10, 200, 50, function(Value)
+    AimRange = Value
+end)
+
+local function GetTarget()
+    local Char = LocalPlayer.Character
+    if not Char then return end
+    local Root = Char:FindFirstChild("HumanoidRootPart")
+    if not Root then return end
+
+    local CX = Camera.ViewportSize.X / 2
+    local CY = Camera.ViewportSize.Y / 2
+    local Best = nil
+    local BestAngle = math.huge
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v == LocalPlayer then continue end
+        local TargetChar = v.Character
+        if not TargetChar then continue end
+        local TargetRoot = TargetChar:FindFirstChild("HumanoidRootPart")
+        if not TargetRoot then continue end
+
+        local dist = (Root.Position - TargetRoot.Position).Magnitude
+        if dist > AimRange then continue end
+
+        local Pos, OnScreen = Camera:WorldToViewportPoint(TargetRoot.Position)
+        if not OnScreen then continue end
+
+        local dx = Pos.X - CX
+        local dy = Pos.Y - CY
+        local angle = math.sqrt(dx * dx + dy * dy)
+
+        if angle < BestAngle and angle < AimFOV then
+            BestAngle = angle
+            Best = v
+        end
+    end
+    return Best
+end
+
+UserInputService.InputBegan:Connect(function(Input, Processed)
+    if Processed then return end
+    if Input.KeyCode == Enum.KeyCode.E or Input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if AimState then
+            local Target = GetTarget()
+            if Target and Target.Character then
+                VirtualInput:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                wait(0.05)
+                VirtualInput:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            end
+        end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(Input, Processed)
+    if Processed then return end
+    if Input.KeyCode == Enum.KeyCode.R then
+        AimState = not AimState
+        FOVCircle.Visible = AimState
+    end
+end)
