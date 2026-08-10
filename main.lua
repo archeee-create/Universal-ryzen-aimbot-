@@ -23,95 +23,133 @@ local Window = Rayfield:CreateWindow({
 })
 
 local ESPTab = Window:CreateTab("ESP")
-local ESPSection = ESPTab:CreateSection("Основные настройки")
+local ESPSection = ESPTab:CreateSection("Настройки ESP")
 
-local Toggles = {}
+local Settings = {
+    ESP = false,
+    Team = false,
+    HPBar = false,
+    HPText = false,
+    State = false,
+    Distance = false,
+    Nickname = false
+}
 
-Toggles.ESP = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "ESP",
     CurrentValue = false,
     Flag = "ESP_Enabled",
     Callback = function(Value)
-        Toggles.ESP.Value = Value
+        Settings.ESP = Value
+        if Settings.ESP then
+            for _, Player in pairs(Players:GetPlayers()) do
+                if Player ~= LocalPlayer then
+                    CreateESP(Player)
+                end
+            end
+        else
+            for Player, Objects in pairs(ESPObjects) do
+                if Objects.Billboard then
+                    Objects.Billboard:Destroy()
+                end
+            end
+            ESPObjects = {}
+        end
     end
 })
 
-Toggles.Team = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "Team Check",
     CurrentValue = false,
     Flag = "ESP_Team",
     Callback = function(Value)
-        Toggles.Team.Value = Value
+        Settings.Team = Value
     end
 })
 
-Toggles.HPBar = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "HP Bar",
     CurrentValue = false,
     Flag = "ESP_HPBar",
     Callback = function(Value)
-        Toggles.HPBar.Value = Value
+        Settings.HPBar = Value
     end
 })
 
-Toggles.HPText = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "HP Text",
     CurrentValue = false,
     Flag = "ESP_HPText",
     Callback = function(Value)
-        Toggles.HPText.Value = Value
+        Settings.HPText = Value
     end
 })
 
-Toggles.State = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "State",
     CurrentValue = false,
     Flag = "ESP_State",
     Callback = function(Value)
-        Toggles.State.Value = Value
+        Settings.State = Value
     end
 })
 
-Toggles.Distance = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "Distance",
     CurrentValue = false,
     Flag = "ESP_Distance",
     Callback = function(Value)
-        Toggles.Distance.Value = Value
+        Settings.Distance = Value
     end
 })
 
-Toggles.Nickname = ESPTab:CreateToggle({
+ESPTab:CreateToggle({
     Name = "Nickname",
     CurrentValue = false,
     Flag = "ESP_Nickname",
     Callback = function(Value)
-        Toggles.Nickname.Value = Value
+        Settings.Nickname = Value
     end
 })
 
-local ESPObjects = {}
 local Colors = {
     Friend = Color3.fromRGB(0, 255, 0),
     Enemy = Color3.fromRGB(255, 0, 0),
-    HPBarBG = Color3.fromRGB(30, 30, 30)
+    HPBarBG = Color3.fromRGB(30, 30, 30),
+    Healthy = Color3.fromRGB(0, 255, 0),
+    Injured = Color3.fromRGB(255, 255, 0),
+    Knocked = Color3.fromRGB(255, 165, 0),
+    Hooked = Color3.fromRGB(255, 0, 255)
 }
 
+local ESPObjects = {}
+
 local function GetPlayerState(Player)
-    if not Player.Character or not Player.Character:FindFirstChild("Humanoid") then
-        return "Dead"
+    if not Player.Character then
+        return "Dead", Color3.fromRGB(255, 0, 0)
     end
-    local Humanoid = Player.Character.Humanoid
-    if Humanoid.Health <= 0 then
-        return "Dead"
+    local Humanoid = Player.Character:FindFirstChild("Humanoid")
+    if not Humanoid then
+        return "Dead", Color3.fromRGB(255, 0, 0)
     end
-    if Player.Character:FindFirstChild("IsHiding") then
-        return "Hiding"
+    local Health = Humanoid.Health
+    local MaxHealth = Humanoid.MaxHealth
+    
+    if Player.Character:FindFirstChild("Hooked") then
+        return "Hooked", Colors.Hooked
     end
-    if Player.Character:FindFirstChild("IsInvisible") then
-        return "Invisible"
+    
+    if Player.Character:FindFirstChild("Knocked") or Player.Character:FindFirstChild("Downed") then
+        return "Knocked", Colors.Knocked
     end
-    return "Alive"
+    
+    if Health <= 0 then
+        return "Dead", Color3.fromRGB(255, 0, 0)
+    elseif Health < MaxHealth then
+        return "Injured", Colors.Injured
+    else
+        return "Healthy", Colors.Healthy
+    end
 end
 
 local function GetTeamColor(Player)
@@ -197,7 +235,7 @@ local function CreateESP(Player)
     StateText.Size = UDim2.new(0.7, 0, 0.1, 0)
     StateText.Position = UDim2.new(0.15, 0, 0.42, 0)
     StateText.BackgroundTransparency = 1
-    StateText.Text = "State: Alive"
+    StateText.Text = "State: Healthy"
     StateText.TextColor3 = Color3.fromRGB(0, 255, 0)
     StateText.TextScaled = true
     StateText.Font = Enum.Font.Gotham
@@ -276,18 +314,10 @@ local function UpdateESP()
                 Objects.HPText.Text = "HP: " .. math.floor(Health) .. "/" .. math.floor(MaxHealth)
             end
 
-            local State = GetPlayerState(Player)
+            local State, StateColor = GetPlayerState(Player)
             if Objects.StateText then
                 Objects.StateText.Text = "State: " .. State
-                if State == "Dead" then
-                    Objects.StateText.TextColor3 = Color3.fromRGB(255, 0, 0)
-                elseif State == "Hiding" then
-                    Objects.StateText.TextColor3 = Color3.fromRGB(255, 255, 0)
-                elseif State == "Invisible" then
-                    Objects.StateText.TextColor3 = Color3.fromRGB(128, 0, 255)
-                else
-                    Objects.StateText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                end
+                Objects.StateText.TextColor3 = StateColor
             end
 
             if Objects.DistanceText then
@@ -302,7 +332,7 @@ local function UpdateESP()
 
             if Objects.NicknameText then
                 Objects.NicknameText.Text = Player.Name
-                if Toggles.Team.Value and Player.Team == LocalPlayer.Team then
+                if Settings.Team and Player.Team == LocalPlayer.Team then
                     Objects.NicknameText.TextColor3 = Colors.Friend
                 else
                     Objects.NicknameText.TextColor3 = Colors.Enemy
@@ -310,31 +340,23 @@ local function UpdateESP()
             end
 
             if Objects.Frame1 then
-                Objects.Frame1.Visible = Toggles.ESP.Value
+                Objects.Frame1.Visible = Settings.ESP
             end
             if Objects.HPBarBG then
-                Objects.HPBarBG.Visible = Toggles.HPBar.Value
+                Objects.HPBarBG.Visible = Settings.HPBar
             end
             if Objects.HPText then
-                Objects.HPText.Visible = Toggles.HPText.Value
+                Objects.HPText.Visible = Settings.HPText
             end
             if Objects.StateText then
-                Objects.StateText.Visible = Toggles.State.Value
+                Objects.StateText.Visible = Settings.State
             end
             if Objects.DistanceText then
-                Objects.DistanceText.Visible = Toggles.Distance.Value
+                Objects.DistanceText.Visible = Settings.Distance
             end
             if Objects.NicknameText then
-                Objects.NicknameText.Visible = Toggles.Nickname.Value
+                Objects.NicknameText.Visible = Settings.Nickname
             end
-        end
-    end
-end
-
-local function SetupAllPlayers()
-    for _, Player in pairs(Players:GetPlayers()) do
-        if Player ~= LocalPlayer and not ESPObjects[Player] then
-            CreateESP(Player)
         end
     end
 end
@@ -347,7 +369,9 @@ local function RecreateESP(Player)
         ESPObjects[Player] = nil
     end
     wait(0.5)
-    CreateESP(Player)
+    if Settings.ESP then
+        CreateESP(Player)
+    end
 end
 
 Players.PlayerAdded:Connect(function(Player)
@@ -373,8 +397,6 @@ for _, Player in pairs(Players:GetPlayers()) do
     end
 end
 
-SetupAllPlayers()
-
 RunService.RenderStepped:Connect(function()
     UpdateESP()
 end)
@@ -382,7 +404,21 @@ end)
 UserInputService.InputBegan:Connect(function(Input, Processed)
     if Processed then return end
     if Input.KeyCode == Enum.KeyCode.Insert then
-        Toggles.ESP.Value = not Toggles.ESP.Value
-        Rayfield:SetToggle("ESP_Enabled", Toggles.ESP.Value)
+        Settings.ESP = not Settings.ESP
+        Rayfield:SetToggle("ESP_Enabled", Settings.ESP)
+        if Settings.ESP then
+            for _, Player in pairs(Players:GetPlayers()) do
+                if Player ~= LocalPlayer then
+                    CreateESP(Player)
+                end
+            end
+        else
+            for Player, Objects in pairs(ESPObjects) do
+                if Objects.Billboard then
+                    Objects.Billboard:Destroy()
+                end
+            end
+            ESPObjects = {}
+        end
     end
 end)
