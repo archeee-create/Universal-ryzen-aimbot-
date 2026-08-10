@@ -4,17 +4,18 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local VirtualInput = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local Mouse = LocalPlayer:GetMouse()
 
--- ========== СОЗДАЁМ МЕНЮ ==========
+-- ========== UI ==========
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "VibeFarmUI"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 280)
+MainFrame.Size = UDim2.new(0, 320, 0, 320)
 MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 MainFrame.BackgroundTransparency = 0.05
@@ -23,12 +24,10 @@ MainFrame.Parent = ScreenGui
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- Закругление
 local Corner = Instance.new("UICorner")
 Corner.CornerRadius = UDim.new(0, 16)
 Corner.Parent = MainFrame
 
--- Градиентный фон
 local Gradient = Instance.new("UIGradient")
 Gradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 15, 50)),
@@ -38,7 +37,6 @@ Gradient.Color = ColorSequence.new({
 Gradient.Rotation = 45
 Gradient.Parent = MainFrame
 
--- Анимация градиента
 spawn(function()
     local angle = 0
     while wait(0.05) do
@@ -47,7 +45,6 @@ spawn(function()
     end
 end)
 
--- Заголовок
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 40)
 Title.Position = UDim2.new(0, 0, 0, 0)
@@ -58,7 +55,6 @@ Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
--- Разделитель
 local Line = Instance.new("Frame")
 Line.Size = UDim2.new(0.9, 0, 0, 2)
 Line.Position = UDim2.new(0.05, 0, 0, 45)
@@ -66,7 +62,7 @@ Line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 Line.BackgroundTransparency = 0.3
 Line.Parent = MainFrame
 
--- ========== ПЕРЕКЛЮЧАТЕЛЬ 1 ==========
+-- Переключатель 1 (Авто-фарм)
 local FarmFrame = Instance.new("Frame")
 FarmFrame.Size = UDim2.new(0.9, 0, 0, 45)
 FarmFrame.Position = UDim2.new(0.05, 0, 0, 60)
@@ -118,7 +114,7 @@ FarmBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== ПЕРЕКЛЮЧАТЕЛЬ 2 ==========
+-- Переключатель 2 (Авто-спасение)
 local RescueFrame = Instance.new("Frame")
 RescueFrame.Size = UDim2.new(0.9, 0, 0, 45)
 RescueFrame.Position = UDim2.new(0.05, 0, 0, 115)
@@ -170,7 +166,7 @@ RescueBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ========== СТАТУС ==========
+-- Статус
 local StatusFrame = Instance.new("Frame")
 StatusFrame.Size = UDim2.new(0.9, 0, 0, 36)
 StatusFrame.Position = UDim2.new(0.05, 0, 0, 175)
@@ -192,7 +188,7 @@ StatusText.TextScaled = true
 StatusText.Font = Enum.Font.Gotham
 StatusText.Parent = StatusFrame
 
--- ========== КНОПКА ЗАКРЫТИЯ ==========
+-- Кнопка закрытия
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 24, 0, 24)
 CloseBtn.Position = UDim2.new(1, -30, 0, 8)
@@ -214,7 +210,6 @@ CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = MenuVisible
 end)
 
--- ========== ОТКРЫТИЕ/ЗАКРЫТИЕ ПО INSERT ==========
 UserInputService.InputBegan:Connect(function(Input, Processed)
     if Processed then return end
     if Input.KeyCode == Enum.KeyCode.Insert then
@@ -223,13 +218,13 @@ UserInputService.InputBegan:Connect(function(Input, Processed)
     end
 end)
 
--- ========== ФУНКЦИЯ ОБНОВЛЕНИЯ СТАТУСА ==========
 local function UpdateStatus(Text)
     StatusText.Text = Text
 end
 
 -- ========== ЯДРО СКРИПТА ==========
 
+-- Проверка на убийцу
 local function IsKiller(Player)
     if not Player then return false end
     if Player.Team then
@@ -242,7 +237,7 @@ local function IsKiller(Player)
 end
 
 local function IsKillerNearby(Position, Radius)
-    Radius = Radius or 25
+    Radius = Radius or 15
     for _, Player in pairs(Players:GetPlayers()) do
         if Player ~= LocalPlayer and IsKiller(Player) then
             local Char = Player.Character
@@ -257,10 +252,13 @@ local function IsKillerNearby(Position, Radius)
     return false
 end
 
+-- ========== АВТО-СКИЛЛЧЕК (НАЖАТИЕ ПРОБЕЛ НА БЕЛОМ) ==========
 local function AutoSkillCheck()
     local skillCheckFrame = nil
     local whiteZone = nil
+    local arrow = nil
     
+    -- Ищем элементы скиллчека в GUI
     for _, v in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
         if v.Name == "SkillCheckFrame" then
             skillCheckFrame = v
@@ -268,15 +266,16 @@ local function AutoSkillCheck()
         if v.Name == "WhiteZone" or v.Name == "PerfectZone" then
             whiteZone = v
         end
+        if v.Name == "Arrow" then
+            arrow = v
+        end
     end
     
-    if not skillCheckFrame or not whiteZone then
+    if not skillCheckFrame or not whiteZone or not arrow then
         return false
     end
     
-    local arrow = skillCheckFrame:FindFirstChild("Arrow")
-    if not arrow then return false end
-    
+    -- Определяем позицию стрелки и белой зоны
     local arrowPos = arrow.Position.X.Scale
     local whitePos = whiteZone.Position.X.Scale
     local whiteSize = whiteZone.Size.X.Scale
@@ -284,6 +283,7 @@ local function AutoSkillCheck()
     local isInWhite = arrowPos >= whitePos and arrowPos <= whitePos + whiteSize
     
     if isInWhite then
+        -- Нажимаем пробел
         VirtualInput:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
         wait(0.05)
         VirtualInput:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
@@ -292,8 +292,10 @@ local function AutoSkillCheck()
     return false
 end
 
+-- ========== ТЕЛЕПОРТ ==========
 local LastTeleportPos = nil
 local LastTeleportTime = 0
+local ReturnPosition = nil
 
 local function TeleportTo(Position)
     if not Position then return false end
@@ -301,13 +303,12 @@ local function TeleportTo(Position)
     if LastTeleportPos and LastTeleportTime then
         local dist = (Position - LastTeleportPos).Magnitude
         if dist < 2 and tick() - LastTeleportTime < 3 then
-            UpdateStatus("⏳ Уже телепортировался сюда")
             return false
         end
     end
     
-    if IsKillerNearby(Position, 25) then
-        UpdateStatus("⚠️ Убийца рядом! Телепорт отменён")
+    if IsKillerNearby(Position, 15) then
+        UpdateStatus("⚠️ Убийца рядом!")
         return false
     end
     
@@ -316,15 +317,33 @@ local function TeleportTo(Position)
     local RootPart = Char:FindFirstChild("HumanoidRootPart")
     if not RootPart then return false end
     
+    -- Запоминаем позицию (только для спасения)
+    if AutoRescue then
+        ReturnPosition = RootPart.Position
+    end
+    
     RootPart.CFrame = CFrame.new(Position)
     LastTeleportPos = Position
     LastTeleportTime = tick()
-    UpdateStatus("✅ Телепорт выполнен")
     return true
 end
 
-local function FindNearestBrokenGen(Radius)
-    Radius = Radius or 500
+local function TeleportBack()
+    if not ReturnPosition then return false end
+    
+    local Char = LocalPlayer.Character
+    if not Char then return false end
+    local RootPart = Char:FindFirstChild("HumanoidRootPart")
+    if not RootPart then return false end
+    
+    RootPart.CFrame = CFrame.new(ReturnPosition)
+    UpdateStatus("↩️ Вернулся на позицию")
+    ReturnPosition = nil
+    return true
+end
+
+-- ========== ПОИСК ГЕНЕРАТОРОВ ==========
+local function FindNearestBrokenGen()
     local Char = LocalPlayer.Character
     if not Char then return nil end
     local RootPart = Char:FindFirstChild("HumanoidRootPart")
@@ -335,19 +354,20 @@ local function FindNearestBrokenGen(Radius)
     
     for _, Gen in pairs(workspace:GetDescendants()) do
         if Gen.Name == "Generator" and Gen:FindFirstChild("Broken") and Gen.Broken.Value == true then
-            if Gen:FindFirstChild("Position") then
-                local dist = (RootPart.Position - Gen.Position.Value).Magnitude
-                if dist < Radius and dist < nearestDist then
-                    nearestDist = dist
-                    nearestGen = Gen
-                end
+            local pos = Gen:FindFirstChild("Position") or Gen:FindFirstChild("HumanoidRootPart") or Gen:FindFirstChild("PrimaryPart")
+            if not pos then continue end
+            local dist = (RootPart.Position - pos.Position).Magnitude
+            if dist < nearestDist then
+                nearestDist = dist
+                nearestGen = Gen
             end
         end
     end
     return nearestGen
 end
 
-local function FindNearestDownedPlayer()
+-- ========== ПОИСК ВЫЖИВШИХ С HP <= 50 ИЛИ НА КОЛУ ==========
+local function FindNearestSurvivorInNeed()
     local Char = LocalPlayer.Character
     if not Char then return nil end
     local RootPart = Char:FindFirstChild("HumanoidRootPart")
@@ -357,47 +377,77 @@ local function FindNearestDownedPlayer()
     local nearestDist = math.huge
     
     for _, Player in pairs(Players:GetPlayers()) do
-        if Player ~= LocalPlayer and not IsKiller(Player) then
-            local TargetChar = Player.Character
-            if TargetChar and TargetChar:FindFirstChild("HumanoidRootPart") and TargetChar:FindFirstChild("Humanoid") then
-                local Humanoid = TargetChar.Humanoid
-                
-                if IsKillerNearby(TargetChar.HumanoidRootPart.Position, 20) then
-                    continue
-                end
-                
-                local dist = (RootPart.Position - TargetChar.HumanoidRootPart.Position).Magnitude
-                local IsInjured = Humanoid.Health > 0 and Humanoid.Health < Humanoid.MaxHealth
-                local IsHooked = TargetChar:FindFirstChild("Hooked") ~= nil
-                
-                if (IsInjured or IsHooked) and dist < nearestDist then
-                    nearestDist = dist
-                    nearestPlayer = Player
-                end
-            end
+        if Player == LocalPlayer then continue end
+        if IsKiller(Player) then continue end
+        
+        local TargetChar = Player.Character
+        if not TargetChar then continue end
+        local Humanoid = TargetChar:FindFirstChild("Humanoid")
+        if not Humanoid then continue end
+        
+        local Health = Humanoid.Health
+        if Health <= 0 then continue end
+        
+        -- Проверяем: HP <= 50 или на колу
+        local IsHooked = TargetChar:FindFirstChild("Hooked") or TargetChar:FindFirstChild("Spike")
+        local IsInjured = Health <= 50
+        
+        if not IsHooked and not IsInjured then continue end
+        
+        local TargetPos = TargetChar:FindFirstChild("HumanoidRootPart")
+        if not TargetPos then continue end
+        
+        if IsKillerNearby(TargetPos.Position, 15) then
+            continue
+        end
+        
+        local dist = (RootPart.Position - TargetPos.Position).Magnitude
+        if dist < nearestDist then
+            nearestDist = dist
+            nearestPlayer = Player
         end
     end
     return nearestPlayer
 end
 
-local function AreAllGensFixed(Radius)
-    Radius = Radius or 500
-    local Char = LocalPlayer.Character
-    if not Char then return true end
-    local RootPart = Char:FindFirstChild("HumanoidRootPart")
-    if not RootPart then return true end
+-- ========== СНЯТИЕ С КОЛА ==========
+local function UnhookPlayer(Player)
+    local TargetChar = Player.Character
+    if not TargetChar then return false end
     
-    for _, Gen in pairs(workspace:GetDescendants()) do
-        if Gen.Name == "Generator" and Gen:FindFirstChild("Broken") and Gen.Broken.Value == true then
-            if Gen:FindFirstChild("Position") then
-                local dist = (RootPart.Position - Gen.Position.Value).Magnitude
-                if dist < Radius then
-                    return false
-                end
-            end
-        end
+    local Hook = TargetChar:FindFirstChild("Hooked") or TargetChar:FindFirstChild("Spike")
+    if Hook then
+        Hook:Destroy()
+        UpdateStatus("✅ Снял " .. Player.Name .. " с кола!")
+        return true
     end
-    return true
+    
+    -- Пытаемся нажать правую кнопку для снятия
+    if Mouse then
+        VirtualInput:SendMouseButtonEvent(Enum.UserInputType.MouseButton2, true, Mouse.X, Mouse.Y, 0)
+        wait(0.1)
+        VirtualInput:SendMouseButtonEvent(Enum.UserInputType.MouseButton2, false, Mouse.X, Mouse.Y, 0)
+        UpdateStatus("🖱️ Нажал правую кнопку для снятия")
+        wait(0.5)
+        if Hook then Hook:Destroy() end
+        return true
+    end
+    return false
+end
+
+-- ========== ЛЕЧЕНИЕ ==========
+local function HealPlayer(Player)
+    local TargetChar = Player.Character
+    if not TargetChar then return false end
+    local Humanoid = TargetChar:FindFirstChild("Humanoid")
+    if not Humanoid then return false end
+    
+    if Humanoid.Health > 0 and Humanoid.Health < Humanoid.MaxHealth then
+        Humanoid.Health = Humanoid.MaxHealth
+        UpdateStatus("💊 Вылечил " .. Player.Name)
+        return true
+    end
+    return false
 end
 
 -- ========== АНТИ-AFK ==========
@@ -413,92 +463,96 @@ AntiAFK()
 
 -- ========== ГЛАВНЫЙ ЦИКЛ ==========
 local function MainLoop()
-    while wait(0.5) do
-        UpdateStatus("🔄 Сканирование карты...")
+    while wait(1) do
+        UpdateStatus("🔄 Сканирование...")
         
+        -- ===== АВТО-ФАРМ (без возврата) =====
         if AutoFarm then
-            local Gen = FindNearestBrokenGen(500)
+            local Gen = FindNearestBrokenGen()
             if Gen then
-                UpdateStatus("🔧 Чиню генератор...")
-                local Success = TeleportTo(Gen.Position.Value)
-                if Success then
-                    local RepairStart = tick()
-                    while tick() - RepairStart < 30 do
-                        AutoSkillCheck()
-                        wait(0.1)
-                        if Gen:FindFirstChild("Broken") and Gen.Broken.Value == false then
-                            break
+                UpdateStatus("🔧 Ищу генератор...")
+                local pos = Gen:FindFirstChild("Position") or Gen:FindFirstChild("HumanoidRootPart") or Gen:FindFirstChild("PrimaryPart")
+                if pos then
+                    if TeleportTo(pos.Position) then
+                        UpdateStatus("🔧 Чиню генератор (авто-скиллчек)...")
+                        local repairTime = 0
+                        local success = false
+                        while repairTime < 30 and Gen.Parent and Gen.Broken and Gen.Broken.Value == true do
+                            if AutoSkillCheck() then
+                                UpdateStatus("✅ Идеальный скиллчек!")
+                            end
+                            wait(0.3)
+                            repairTime = repairTime + 0.3
                         end
-                    end
-                    if Gen:FindFirstChild("Broken") then
-                        Gen.Broken.Value = false
-                        UpdateStatus("✅ Генератор починен!")
+                        if Gen.Broken and Gen.Broken.Value == false then
+                            UpdateStatus("✅ Генератор починен!")
+                        else
+                            UpdateStatus("⏳ Генератор ещё чинится...")
+                        end
+                        -- НЕ ВОЗВРАЩАЕМСЯ
                     end
                 end
             else
-                if AreAllGensFixed(500) then
-                    UpdateStatus("⚡ Все генераторы починены!")
-                    
-                    local AllAlive = true
-                    for _, Player in pairs(Players:GetPlayers()) do
-                        if Player ~= LocalPlayer and not IsKiller(Player) then
-                            local Char = Player.Character
-                            if Char and Char:FindFirstChild("Humanoid") then
-                                if Char.Humanoid.Health <= 0 then
-                                    AllAlive = false
-                                end
+                UpdateStatus("⚡ Все генераторы починены!")
+                
+                local AllAlive = true
+                for _, Player in pairs(Players:GetPlayers()) do
+                    if Player ~= LocalPlayer and not IsKiller(Player) then
+                        local Char = Player.Character
+                        if Char and Char:FindFirstChild("Humanoid") then
+                            if Char.Humanoid.Health <= 0 then
+                                AllAlive = false
                             end
                         end
                     end
-                    
-                    if AllAlive then
-                        local GateFound = false
-                        for _, Gate in pairs(workspace:GetDescendants()) do
-                            if Gate.Name:lower():find("gate") or Gate.Name:lower():find("exit") then
-                                if Gate:FindFirstChild("Position") then
-                                    local dist = (LocalPlayer.Character.HumanoidRootPart.Position - Gate.Position.Value).Magnitude
-                                    if dist < 500 then
-                                        UpdateStatus("🚪 Телепорт к выходу!")
-                                        TeleportTo(Gate.Position.Value)
-                                        GateFound = true
-                                        break
-                                    end
-                                end
+                end
+                
+                if AllAlive then
+                    for _, Gate in pairs(workspace:GetDescendants()) do
+                        if Gate.Name:lower():find("gate") or Gate.Name:lower():find("exit") then
+                            if Gate:FindFirstChild("Position") then
+                                UpdateStatus("🚪 Телепорт к выходу!")
+                                TeleportTo(Gate.Position.Value)
+                                break
                             end
                         end
-                        if not GateFound then
-                            UpdateStatus("🚪 Выход не найден")
-                        end
                     end
-                else
-                    UpdateStatus("⏳ Поиск генераторов...")
                 end
             end
         end
         
+        -- ===== АВТО-СПАСЕНИЕ (с возвратом) =====
         if AutoRescue then
-            local TargetPlayer = FindNearestDownedPlayer()
+            local TargetPlayer = FindNearestSurvivorInNeed()
             if TargetPlayer then
                 local TargetChar = TargetPlayer.Character
                 if TargetChar then
                     local Humanoid = TargetChar:FindFirstChild("Humanoid")
                     if Humanoid then
-                        if TargetChar:FindFirstChild("Hooked") then
-                            UpdateStatus("🆘 Снимаю " .. TargetPlayer.Name)
-                            TeleportTo(TargetChar.HumanoidRootPart.Position + Vector3.new(0, 2, 0))
-                            wait(1)
-                            local Hook = TargetChar:FindFirstChild("Hooked")
-                            if Hook then Hook:Destroy() end
-                        elseif Humanoid.Health > 0 and Humanoid.Health < Humanoid.MaxHealth then
-                            UpdateStatus("💊 Лечу " .. TargetPlayer.Name)
-                            TeleportTo(TargetChar.HumanoidRootPart.Position + Vector3.new(0, 2, 0))
-                            wait(2)
-                            Humanoid.Health = Humanoid.MaxHealth
+                        local Health = Humanoid.Health
+                        local IsHooked = TargetChar:FindFirstChild("Hooked") or TargetChar:FindFirstChild("Spike")
+                        
+                        if IsHooked then
+                            UpdateStatus("🆘 Снимаю " .. TargetPlayer.Name .. " (HP: " .. math.floor(Health) .. ")")
+                            local pos = TargetChar:FindFirstChild("HumanoidRootPart")
+                            if pos and TeleportTo(pos.Position + Vector3.new(0, 2, 0)) then
+                                UnhookPlayer(TargetPlayer)
+                                wait(0.5)
+                                TeleportBack()
+                            end
+                        elseif Health <= 50 then
+                            UpdateStatus("💊 Лечу " .. TargetPlayer.Name .. " (HP: " .. math.floor(Health) .. ")")
+                            local pos = TargetChar:FindFirstChild("HumanoidRootPart")
+                            if pos and TeleportTo(pos.Position + Vector3.new(0, 2, 0)) then
+                                HealPlayer(TargetPlayer)
+                                wait(0.5)
+                                TeleportBack()
+                            end
                         end
                     end
                 end
             else
-                UpdateStatus("💚 Все здоровы и свободны")
+                UpdateStatus("💚 Все здоровы (HP > 50) или никто не нуждается")
             end
         end
     end
@@ -506,4 +560,4 @@ end
 
 spawn(MainLoop)
 
-print("✦ Vibe Farm Script with custom UI loaded!")
+print("✦ Vibe Farm Script (финальная версия) загружен!")
