@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + ESP + FOV КРУГ (включается с аимботом)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + ESP + FOV КРУГ (сдвинутый)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -27,8 +27,7 @@ local function loadSettings()
         showName = false,
         showTeam = false,
         showLookDirection = false,
-        showHighlight = false,
-        showFOV = false
+        showHighlight = false
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -66,9 +65,9 @@ local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
 
--- ============================================================
--- ===== FOV КРУГ (ВКЛЮЧАЕТСЯ С АИМБОТОМ) =====
--- ============================================================
+-- ============================================
+-- FOV КРУГ (РАБОЧИЙ, СДВИНУТЫЙ)
+-- ============================================
 local fovSize = settings.fov
 local fovCircle = nil
 local circleFrame = nil
@@ -86,7 +85,7 @@ local function CreateFOVCircle()
     
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, fovSize * 2, 0, fovSize * 2)
-    circle.Position = UDim2.new(0.5, -fovSize, 0.5, -fovSize)
+    circle.Position = UDim2.new(0.5, -fovSize, 0.5, -fovSize - 30)  -- ← СДВИГ
     circle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     circle.BackgroundTransparency = 1
     circle.BorderSizePixel = 0
@@ -119,18 +118,13 @@ local function UpdateFOVCircle(newSize)
     if not circleFrame then return end
     fovSize = newSize
     
-    local tweenInfo = TweenInfo.new(
-        0.15,
-        Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out
-    )
-    
+    local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local tween = game:GetService("TweenService"):Create(
         circleFrame,
         tweenInfo,
         {
             Size = UDim2.new(0, newSize * 2, 0, newSize * 2),
-            Position = UDim2.new(0.5, -newSize, 0.5, -newSize)
+            Position = UDim2.new(0.5, -newSize, 0.5, -newSize - 30)  -- ← СДВИГ
         }
     )
     tween:Play()
@@ -546,7 +540,7 @@ MainTab:CreateToggle({
 MainTab:CreateSection({ name = "Настройки" })
 
 MainTab:CreateSlider({
-    name = "FOV (радиус в пикселях)",
+    name = "Круг FOV (радиус)",
     range = {20, 500},
     increment = 1,
     suffix = " px",
