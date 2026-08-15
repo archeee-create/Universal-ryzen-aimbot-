@@ -1,146 +1,8 @@
--- Zenle — Neonsystem (FULL FIXED + КАСТОМНЫЙ БАННЕР)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Visuals (без трейсеров)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
--- ============================================================
--- ===== ПОЛНАЯ НЕОНОВО-ФИОЛЕТОВАЯ ТЕМА =====
--- ============================================================
-local NeonPurpleTheme = {
-    TextColor = Color3.fromRGB(220, 200, 255),
-    Background = Color3.fromRGB(8, 0, 20),
-    Topbar = Color3.fromRGB(20, 5, 45),
-    Shadow = Color3.fromRGB(0, 0, 0),
-
-    NotificationBackground = Color3.fromRGB(15, 0, 40),
-    NotificationActionsBackground = Color3.fromRGB(40, 10, 80),
-
-    TabBackground = Color3.fromRGB(50, 20, 100),
-    TabStroke = Color3.fromRGB(100, 40, 200),
-    TabBackgroundSelected = Color3.fromRGB(180, 80, 255),
-    TabTextColor = Color3.fromRGB(180, 150, 220),
-    SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
-
-    ElementBackground = Color3.fromRGB(30, 10, 60),
-    ElementBackgroundHover = Color3.fromRGB(60, 20, 120),
-    SecondaryElementBackground = Color3.fromRGB(20, 5, 50),
-    ElementStroke = Color3.fromRGB(80, 30, 160),
-    SecondaryElementStroke = Color3.fromRGB(50, 15, 100),
-
-    SliderBackground = Color3.fromRGB(60, 20, 130),
-    SliderProgress = Color3.fromRGB(200, 100, 255),
-    SliderStroke = Color3.fromRGB(150, 60, 220),
-
-    ToggleBackground = Color3.fromRGB(25, 5, 60),
-    ToggleEnabled = Color3.fromRGB(180, 80, 255),
-    ToggleDisabled = Color3.fromRGB(60, 30, 90),
-    ToggleEnabledStroke = Color3.fromRGB(220, 120, 255),
-    ToggleDisabledStroke = Color3.fromRGB(80, 40, 120),
-    ToggleEnabledOuterStroke = Color3.fromRGB(150, 50, 220),
-    ToggleDisabledOuterStroke = Color3.fromRGB(50, 20, 80),
-
-    DropdownSelected = Color3.fromRGB(60, 20, 130),
-    DropdownUnselected = Color3.fromRGB(35, 10, 80),
-
-    InputBackground = Color3.fromRGB(25, 5, 60),
-    InputStroke = Color3.fromRGB(80, 30, 160),
-    PlaceholderColor = Color3.fromRGB(150, 120, 200),
-
-    ScrollBarBackground = Color3.fromRGB(20, 5, 50),
-    ScrollBarThumb = Color3.fromRGB(120, 50, 200),
-    ScrollBarThumbHover = Color3.fromRGB(160, 70, 230),
-
-    DropdownItemBackground = Color3.fromRGB(30, 10, 60),
-    DropdownItemBackgroundHover = Color3.fromRGB(60, 20, 120),
-
-    SliderTrack = Color3.fromRGB(40, 15, 80),
-    SliderFill = Color3.fromRGB(200, 100, 255),
-
-    ToggleKnob = Color3.fromRGB(255, 255, 255),
-    ToggleKnobEnabled = Color3.fromRGB(220, 120, 255),
-
-    InputPlaceholder = Color3.fromRGB(150, 120, 200),
-    InputText = Color3.fromRGB(220, 200, 255),
-
-    ButtonBackground = Color3.fromRGB(30, 10, 60),
-    ButtonBackgroundHover = Color3.fromRGB(60, 20, 120),
-    ButtonText = Color3.fromRGB(220, 200, 255),
-    ButtonTextHover = Color3.fromRGB(255, 255, 255),
-
-    SectionBackground = Color3.fromRGB(15, 0, 40),
-    SectionText = Color3.fromRGB(180, 150, 220),
-
-    DropdownText = Color3.fromRGB(220, 200, 255),
-    DropdownTextSelected = Color3.fromRGB(255, 255, 255),
-
-    SliderText = Color3.fromRGB(220, 200, 255),
-    SliderValueText = Color3.fromRGB(200, 100, 255),
-
-    ToggleText = Color3.fromRGB(220, 200, 255),
-    ToggleTextEnabled = Color3.fromRGB(255, 255, 255),
-
-    -- Баннер (фиолетовый + твой логотип)
-    BannerBackground = Color3.fromRGB(20, 5, 45),
-    BannerIcon = "rbxassetid://99658980981872"
-}
-
--- ============================================================
--- ===== КАСТОМНОЕ УВЕДОМЛЕНИЕ =====
--- ============================================================
-local function Notify(title, content, duration)
-    Rayfield:Notify({
-        Title = title or "Zenle",
-        Content = content or "",
-        Duration = duration or 3
-    })
-end
-
--- ============================================================
--- ===== ОКНО ZENLE =====
--- ============================================================
-local Window = Rayfield:CreateWindow({
-    Name = "Zenle",
-    Theme = NeonPurpleTheme,
-    Icon = 99658980981872,
-    LoadingTitle = false,
-    ConfigurationSaving = { Enabled = false }
-})
-
--- ============================================================
--- ===== КАСТОМИЗАЦИЯ БАННЕРА =====
--- ============================================================
-local function CustomizeBanner()
-    for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
-        if gui:IsA("ScreenGui") and gui.Name == "Rayfield" then
-            for _, child in ipairs(gui:GetChildren()) do
-                if child:IsA("ImageLabel") and child.Name == "Banner" then
-                    child.BackgroundColor3 = Color3.fromRGB(20, 5, 45)
-                    child.BackgroundTransparency = 0
-                    child.Image = "rbxassetid://99658980981872"
-                    child.ImageColor3 = Color3.fromRGB(255, 255, 255)
-                    child.ImageTransparency = 0
-                    child.BackgroundTransparency = 0.2
-                end
-            end
-        end
-    end
-end
-
--- Ждём, пока баннер создастся, и меняем его
-task.wait(0.2)
-CustomizeBanner()
-
-Notify("Zenle", "Неоновая система загружена", 3)
-
--- ============================================================
--- ===== ВКЛАДКИ =====
--- ============================================================
-local MainTab = Window:CreateTab({ name = "Aimbot", icon = "🎯" })
-local VisualsTab = Window:CreateTab({ name = "Visuals", icon = "👁️" })
-local SettingsTab = Window:CreateTab({ name = "Settings", icon = "⚙️" })
-
--- ============================================================
 -- ===== СОХРАНЕНИЕ =====
--- ============================================================
-local saveFolder = "/storage/emulated/0/delta/workspace/Zenle"
+local saveFolder = "/storage/emulated/0/delta/workspace/RyzenAimbot"
 local saveFile = "settings.json"
 local fullPath = saveFolder .. "/" .. saveFile
 
@@ -188,15 +50,24 @@ local function saveSettings(data)
     end)
 end
 
+-- ===== МЕНЮ =====
+local Window = Rayfield:CreateWindow({
+    Name = "Ryzen System",
+    ConfigurationSaving = { Enabled = false }
+})
+
+local MainTab = Window:CreateTab({ name = "Aimbot", icon = "🎯" })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = "👁️" })
+
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
 
--- ============================================================
--- ===== FOV КРУГ =====
--- ============================================================
+-- ============================================
+-- FOV КРУГ (СДВИНУТЫЙ)
+-- ============================================
 local fovSize = settings.fov
 local fovCircle = nil
 local circleFrame = nil
@@ -333,7 +204,7 @@ local function CreateESPObjects(plr)
     obj.teamLabel.Visible = false
     obj.teamLabel.Parent = gui
     
-    obj.highlight.Name = "ZenleHighlight"
+    obj.highlight.Name = "RyzenHighlight"
     obj.highlight.FillTransparency = 0.5
     obj.highlight.OutlineTransparency = 0.3
     obj.highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -740,9 +611,17 @@ MainTab:CreateButton({
     callback = function()
         if aimbotEnabled then
             findTarget()
-            Notify("Zenle", lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет", 2)
+            Rayfield:Notify({
+                Title = "Ryzen System",
+                Content = lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет",
+                Duration = 2
+            })
         else
-            Notify("Zenle", "Сначала включите аимбот!", 2)
+            Rayfield:Notify({
+                Title = "Ryzen System",
+                Content = "Сначала включите аимбот!",
+                Duration = 2
+            })
         end
     end
 })
@@ -758,7 +637,11 @@ MainTab:CreateButton({
         settings.resistance = 0.85
         saveSettings(settings)
         UpdateFOVCircle(20)
-        Notify("Zenle", "Настройки сброшены", 2)
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Настройки сброшены",
+            Duration = 2
+        })
     end
 })
 
@@ -829,38 +712,6 @@ VisualsTab:CreateToggle({
 })
 
 -- ============================================================
--- ===== ВКЛАДКА SETTINGS =====
--- ============================================================
-SettingsTab:CreateSection({ name = "Общие" })
-
-SettingsTab:CreateToggle({
-    name = "Закрепить меню",
-    current = false,
-    callback = function(v)
-        Window:SetDraggable(not v)
-    end
-})
-
-SettingsTab:CreateButton({
-    name = "Закрыть меню",
-    callback = function()
-        Window:Destroy()
-        Notify("Zenle", "Меню закрыто", 2)
-    end
-})
-
-SettingsTab:CreateButton({
-    name = "Перезапустить скрипт",
-    callback = function()
-        Notify("Zenle", "Перезапуск...", 2)
-        task.wait(0.5)
-        Window:Destroy()
-        task.wait(0.5)
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/archeee-create/Universal-ryzen-aimbot-/refs/heads/main/main.lua"))()
-    end
-})
-
--- ============================================================
 -- ===== ЗАПУСК =====
 -- ============================================================
 game:GetService("RunService").RenderStepped:Connect(function()
@@ -893,4 +744,8 @@ player.CharacterAdded:Connect(function()
     DestroyFOVCircle()
 end)
 
-Notify("Zenle", "Готово. Наслаждайся.", 3)
+Rayfield:Notify({
+    Title = "Ryzen System",
+    Content = "Аимбот + Visuals загружены",
+    Duration = 3
+})
