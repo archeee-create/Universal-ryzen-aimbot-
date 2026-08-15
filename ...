@@ -1,8 +1,8 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Чистая ESP (_G.ESP)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Visuals + Сохранение в /delta/workspace
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
--- ===== СОХРАНЕНИЕ В workspace =====
-local saveFolder = "RyzenAimbot"
+-- ===== СОХРАНЕНИЕ В /storage/emulated/0/delta/workspace =====
+local saveFolder = "/storage/emulated/0/delta/workspace/RyzenAimbot"
 local saveFile = "settings.json"
 local fullPath = saveFolder .. "/" .. saveFile
 
@@ -16,8 +16,8 @@ end
 
 local function loadSettings()
     local default = {
-        fov = 150,
-        maxDistance = 800,
+        fov = 20,
+        maxDistance = 50,
         aimPart = "Head",
         visibleCheck = true,
         ignoreTeam = false,
@@ -27,7 +27,8 @@ local function loadSettings()
         showName = false,
         showTeam = false,
         showLookDirection = false,
-        showHighlight = false
+        showHighlight = false,
+        visualFov = 70
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -50,25 +51,100 @@ local function saveSettings(data)
     end)
 end
 
--- ===== ИНИЦИАЛИЗАЦИЯ =====
+-- ===== МЕНЮ =====
 local Window = Rayfield:CreateWindow({
     Name = "Ryzen System",
     ConfigurationSaving = { Enabled = false }
 })
 
 local MainTab = Window:CreateTab({ name = "Главная", icon = 0 })
-local EspTab = Window:CreateTab({ name = "ESP", icon = 0 })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })
 
--- ===== ПЕРЕМЕННЫЕ =====
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
-
 local settings = loadSettings()
 
+-- ===== ПРИМЕНЯЕМ ВИЗУАЛЬНЫЙ FOV =====
+local function ApplyVisualFOV(value)
+    camera.FieldOfView = value
+end
+
+ApplyVisualFOV(settings.visualFov)
+
 -- ============================================================
--- ===== ЧИСТАЯ ESP ЛОГИКА (БЕЗ ПРИНТОВ) =====
+-- ===== FOV КРУГ (ВКЛЮЧАЕТСЯ С АИМБОТОМ) =====
+-- ============================================================
+local fovSize = settings.fov
+local fovCircle = nil
+local circleFrame = nil
+
+local function CreateFOVCircle()
+    if fovCircle then
+        fovCircle:Destroy()
+        fovCircle = nil
+        circleFrame = nil
+    end
+    
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "FOVCircle"
+    gui.Parent = player.PlayerGui
+    
+    local circle = Instance.new("Frame")
+    circle.Size = UDim2.new(0, fovSize * 2, 0, fovSize * 2)
+    circle.Position = UDim2.new(0.5, -fovSize, 0.5, -fovSize)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    circle.BackgroundTransparency = 1
+    circle.BorderSizePixel = 0
+    circle.ClipsDescendants = true
+    circle.Parent = gui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = circle
+    
+    local outline = Instance.new("UIStroke")
+    outline.Thickness = 2
+    outline.Color = Color3.fromRGB(255, 0, 0)
+    outline.Transparency = 0
+    outline.Parent = circle
+    
+    fovCircle = gui
+    circleFrame = circle
+end
+
+local function DestroyFOVCircle()
+    if fovCircle then
+        fovCircle:Destroy()
+        fovCircle = nil
+        circleFrame = nil
+    end
+end
+
+local function UpdateFOVCircle(newSize)
+    if not circleFrame then return end
+    fovSize = newSize
+    
+    local tweenInfo = TweenInfo.new(
+        0.15,
+        Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out
+    )
+    
+    local tween = game:GetService("TweenService"):Create(
+        circleFrame,
+        tweenInfo,
+        {
+            Size = UDim2.new(0, newSize * 2, 0, newSize * 2),
+            Position = UDim2.new(0.5, -newSize, 0.5, -newSize)
+        }
+    )
+    tween:Play()
+end
+
+-- ============================================================
+-- ===== ESP (_G.ESP) =====
 -- ============================================================
 _G.ESP = {
     Enabled = false,
@@ -362,42 +438,8 @@ player.CharacterAdded:Connect(function()
 end)
 
 -- ============================================================
--- ===== FOV КРУГ (КРАСНЫЙ КОНТУР) =====
--- ============================================================
-local fovSize = settings.fov
-local fovCircle = Instance.new("Frame")
-fovCircle.Name = "FOVCircle"
-fovCircle.Size = UDim2.new(0, fovSize * 2, 0, fovSize * 2)
-fovCircle.Position = UDim2.new(0.5, -fovSize, 0.5, -fovSize)
-fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-fovCircle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-fovCircle.BackgroundTransparency = 1
-fovCircle.BorderSizePixel = 3
-fovCircle.BorderColor3 = Color3.fromRGB(255, 0, 0)
-fovCircle.ZIndex = 999
-fovCircle.Visible = false
-fovCircle.Parent = player.PlayerGui
-
-local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1, 0)
-circleCorner.Parent = fovCircle
-
-local dot = Instance.new("Frame")
-dot.Size = UDim2.new(0, 4, 0, 4)
-dot.Position = UDim2.new(0.5, -2, 0.5, -2)
-dot.AnchorPoint = Vector2.new(0.5, 0.5)
-dot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-dot.BorderSizePixel = 0
-dot.ZIndex = 1000
-dot.Parent = fovCircle
-
-local function updateFOVCircle(newFOV)
-    local size = newFOV * 2
-    fovCircle.Size = UDim2.new(0, size, 0, size)
-    fovCircle.Position = UDim2.new(0.5, -newFOV, 0.5, -newFOV)
-end
-
 -- ===== ФУНКЦИЯ ПРОВЕРКИ ВИДИМОСТИ =====
+-- ============================================================
 local function isPartVisible(part)
     if not part then return false end
     local origin = camera.CFrame.Position
@@ -412,7 +454,9 @@ local function isPartVisible(part)
     return false
 end
 
+-- ============================================================
 -- ===== ФУНКЦИИ АИМБОТА =====
+-- ============================================================
 local function getTargetClosestToCenter()
     local viewport = camera.ViewportSize
     local cx, cy = viewport.X / 2, viewport.Y / 2
@@ -486,7 +530,9 @@ local function findTarget()
     lockedTarget = t or nil
 end
 
--- ===== GUI (Аимбот) =====
+-- ============================================================
+-- ===== GUI =====
+-- ============================================================
 MainTab:CreateSection({ name = "Aimbot" })
 
 MainTab:CreateToggle({
@@ -494,11 +540,12 @@ MainTab:CreateToggle({
     current = false,
     callback = function(v)
         aimbotEnabled = v
-        fovCircle.Visible = v
-        if not v then
-            lockedTarget = nil
-        else
+        if v then
+            CreateFOVCircle()
             findTarget()
+        else
+            DestroyFOVCircle()
+            lockedTarget = nil
         end
     end
 })
@@ -506,7 +553,7 @@ MainTab:CreateToggle({
 MainTab:CreateSection({ name = "Настройки" })
 
 MainTab:CreateSlider({
-    name = "FOV (радиус в пикселях)",
+    name = "Круг FOV (радиус)",
     range = {20, 500},
     increment = 1,
     suffix = " px",
@@ -514,7 +561,7 @@ MainTab:CreateSlider({
     callback = function(v)
         settings.fov = v
         saveSettings(settings)
-        updateFOVCircle(v)
+        UpdateFOVCircle(v)
     end
 })
 
@@ -595,14 +642,14 @@ MainTab:CreateButton({
 MainTab:CreateButton({
     name = "Сбросить настройки",
     callback = function()
-        settings.fov = 150
-        settings.maxDistance = 800
+        settings.fov = 20
+        settings.maxDistance = 50
         settings.aimPart = "Head"
         settings.visibleCheck = true
         settings.ignoreTeam = false
         settings.resistance = 0.85
         saveSettings(settings)
-        updateFOVCircle(150)
+        UpdateFOVCircle(20)
         Rayfield:Notify({
             Title = "Ryzen System",
             Content = "Настройки сброшены",
@@ -612,12 +659,26 @@ MainTab:CreateButton({
 })
 
 -- ============================================================
--- ===== ВКЛАДКА ESP (ПЕРЕКЛЮЧАТЕЛИ УПРАВЛЯЮТ _G.ESP) =====
+-- ===== ВКЛАДКА VISUALS =====
 -- ============================================================
+VisualsTab:CreateSection({ name = "FOV (обзор)" })
 
-EspTab:CreateSection({ name = "Настройки" })
+VisualsTab:CreateSlider({
+    name = "Угол обзора",
+    range = {1, 120},
+    increment = 1,
+    suffix = "°",
+    current = settings.visualFov,
+    callback = function(v)
+        settings.visualFov = v
+        saveSettings(settings)
+        ApplyVisualFOV(v)
+    end
+})
 
-EspTab:CreateToggle({
+VisualsTab:CreateSection({ name = "ESP" })
+
+VisualsTab:CreateToggle({
     name = "ESP",
     current = settings.espEnabled,
     callback = function(v)
@@ -628,7 +689,7 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateToggle({
+VisualsTab:CreateToggle({
     name = "Name",
     current = settings.showName,
     callback = function(v)
@@ -638,7 +699,7 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateToggle({
+VisualsTab:CreateToggle({
     name = "Distance",
     current = settings.showDistance,
     callback = function(v)
@@ -648,7 +709,7 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateToggle({
+VisualsTab:CreateToggle({
     name = "Team",
     current = settings.showTeam,
     callback = function(v)
@@ -658,7 +719,7 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateToggle({
+VisualsTab:CreateToggle({
     name = "Highlight",
     current = settings.showHighlight,
     callback = function(v)
@@ -668,7 +729,7 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateToggle({
+VisualsTab:CreateToggle({
     name = "Look Direction",
     current = settings.showLookDirection,
     callback = function(v)
@@ -678,7 +739,32 @@ EspTab:CreateToggle({
     end
 })
 
--- ===== ЦИКЛЫ АИМБОТА =====
+VisualsTab:CreateSection({ name = "Управление" })
+
+VisualsTab:CreateButton({
+    name = "Сбросить Visuals",
+    callback = function()
+        settings.visualFov = 70
+        settings.espEnabled = false
+        settings.showName = false
+        settings.showDistance = false
+        settings.showTeam = false
+        settings.showHighlight = false
+        settings.showLookDirection = false
+        saveSettings(settings)
+        ApplyVisualFOV(70)
+        ClearESP()
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Visuals сброшены",
+            Duration = 2
+        })
+    end
+})
+
+-- ============================================================
+-- ===== ЗАПУСК =====
+-- ============================================================
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
     if not lockedTarget or not lockedTarget.Character then
@@ -706,11 +792,11 @@ player.CharacterAdded:Connect(function()
     wait(1)
     aimbotEnabled = false
     lockedTarget = nil
-    fovCircle.Visible = false
+    DestroyFOVCircle()
 end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + ESP загружены",
+    Content = "Аимбот + Visuals загружены. Сохранение в /delta/workspace",
     Duration = 3
 })
