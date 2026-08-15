@@ -1,8 +1,8 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Visuals + Сохранение в /delta/workspace
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Visuals (FOV как в Майнкрафте)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
--- ===== СОХРАНЕНИЕ В /storage/emulated/0/delta/workspace =====
-local saveFolder = "/storage/emulated/0/delta/workspace/RyzenAimbot"
+-- ===== СОХРАНЕНИЕ =====
+local saveFolder = "RyzenAimbot"
 local saveFile = "settings.json"
 local fullPath = saveFolder .. "/" .. saveFile
 
@@ -659,9 +659,8 @@ MainTab:CreateButton({
 })
 
 -- ============================================================
--- ===== ВКЛАДКА VISUALS (СО ВСЕМИ ПЕРЕКЛЮЧАТЕЛЯМИ) =====
+-- ===== ВКЛАДКА VISUALS =====
 -- ============================================================
-
 VisualsTab:CreateSection({ name = "FOV (обзор)" })
 
 VisualsTab:CreateSlider({
@@ -798,8 +797,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals загружены. Сохранение в /delta/workspace",
+    Content = "Аимбот + Visuals (FOV как в Майнкрафте) загружены",
     Duration = 3
 })
-
-print("Ryzen: Сохранение в папку: " .. saveFolder)
