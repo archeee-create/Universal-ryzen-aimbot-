@@ -1,8 +1,8 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Visuals (без трейсеров)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + ESP + FOV КРУГ (сдвинутый)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
-local saveFolder = "/storage/emulated/0/delta/workspace/RyzenAimbot"
+local saveFolder = "RyzenAimbot"
 local saveFile = "settings.json"
 local fullPath = saveFolder .. "/" .. saveFile
 
@@ -56,8 +56,8 @@ local Window = Rayfield:CreateWindow({
     ConfigurationSaving = { Enabled = false }
 })
 
-local MainTab = Window:CreateTab({ name = "Aimbot", icon = "🎯" })
-local VisualsTab = Window:CreateTab({ name = "Visuals", icon = "👁️" })
+local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })          -- ← БЫЛО "Главная"
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })      -- ← БЫЛО "ESP"
 
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -66,7 +66,7 @@ local lockedTarget = nil
 local settings = loadSettings()
 
 -- ============================================
--- FOV КРУГ (СДВИНУТЫЙ)
+-- FOV КРУГ (РАБОЧИЙ, СДВИНУТЫЙ)
 -- ============================================
 local fovSize = settings.fov
 local fovCircle = nil
@@ -566,7 +566,7 @@ MainTab:CreateSlider({
 
 MainTab:CreateDropdown({
     name = "Часть тела",
-    options = {"Head", "Torso", "HumanoidRootPart"},
+    options = {"Head", "HumanoidRootPart", "Torso"},
     current = settings.aimPart,
     callback = function(v)
         settings.aimPart = v
@@ -746,6 +746,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals загружены",
+    Content = "Аимбот + Visuals + FOV круг загружены",
     Duration = 3
 })
