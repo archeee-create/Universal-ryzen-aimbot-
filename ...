@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Visuals (Tracers)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + ИДЕАЛЬНЫЕ TRACERS
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -177,7 +177,7 @@ local function CreateESPObjects(plr)
         lookArrow = nil,
         lookArrowTip = nil,
         arrowCreated = false,
-        tracer = nil
+        tracer = Instance.new("Frame")
     }
     
     obj.nameLabel.Size = UDim2.new(0, 200, 0, 20)
@@ -214,8 +214,7 @@ local function CreateESPObjects(plr)
     obj.highlight.Enabled = false
     obj.highlight.Parent = gui
     
-    -- TRACER (линия к игроку)
-    obj.tracer = Instance.new("Frame")
+    -- TRACER (идеальная линия)
     obj.tracer.Size = UDim2.new(0, 2, 0, 100)
     obj.tracer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     obj.tracer.BackgroundTransparency = 0.3
@@ -262,6 +261,90 @@ local function ClearESP()
     espObjects = {}
 end
 
+-- ============================================================
+-- ===== ИДЕАЛЬНЫЕ TRACERS (ОБНОВЛЁННЫЕ) =====
+-- ============================================================
+local function UpdateTracers()
+    local cfg = _G.ESP
+    if not cfg.Enabled or not cfg.ShowTracers then
+        for _, obj in pairs(espObjects) do
+            if obj and obj.tracer then
+                obj.tracer.Visible = false
+            end
+        end
+        return
+    end
+    
+    local viewportSize = camera.ViewportSize
+    local centerX = viewportSize.X / 2
+    local centerY = viewportSize.Y / 2 - 30 -- сдвиг, как у круга
+    
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr == player then continue
+        local obj = espObjects[plr.Name]
+        if not obj or not obj.tracer then continue
+        
+        local head = plr.Character and plr.Character:FindFirstChild("Head")
+        if not head then
+            obj.tracer.Visible = false
+            continue
+        end
+        
+        -- Проецируем голову на экран
+        local screenPos, onScreen = WorldToViewport(head.Position)
+        if not screenPos then
+            obj.tracer.Visible = false
+            continue
+        end
+        
+        local targetX = screenPos.X
+        local targetY = screenPos.Y
+        
+        -- Если цель за пределами экрана — рисуем линию к краю
+        if not onScreen then
+            -- Находим точку пересечения линии с границей экрана
+            local dx = targetX - centerX
+            local dy = targetY - centerY
+            if dx == 0 and dy == 0 then
+                obj.tracer.Visible = false
+                continue
+            end
+            
+            local maxDist = math.sqrt(viewportSize.X^2 + viewportSize.Y^2)
+            local scale = maxDist / math.sqrt(dx^2 + dy^2)
+            targetX = centerX + dx * scale
+            targetY = centerY + dy * scale
+            
+            -- Обрезаем до границ экрана
+            targetX = math.clamp(targetX, 0, viewportSize.X)
+            targetY = math.clamp(targetY, 0, viewportSize.Y)
+        end
+        
+        -- Вычисляем длину и угол линии
+        local dx = targetX - centerX
+        local dy = targetY - centerY
+        local length = math.sqrt(dx^2 + dy^2)
+        
+        if length < 1 then
+            obj.tracer.Visible = false
+            continue
+        end
+        
+        local angle = math.atan2(dy, dx)
+        
+        -- Применяем к трассеру
+        obj.tracer.Visible = true
+        obj.tracer.Size = UDim2.new(0, length, 0, 2)
+        obj.tracer.Position = UDim2.new(0, centerX, 0, centerY)
+        obj.tracer.Rotation = math.deg(angle)
+        obj.tracer.BackgroundColor3 = GetTeamColor(plr)
+        obj.tracer.BackgroundTransparency = 0.3
+    end
+end
+
+-- ============================================================
+-- ===== ОБНОВЛЕНИЕ ESP =====
+-- ============================================================
 local function UpdateESP()
     local cfg = _G.ESP
     if not cfg.Enabled then
@@ -273,11 +356,6 @@ local function UpdateESP()
     if not myChar then return end
     local myRoot = myChar:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
-    
-    -- Центр экрана для трассеров
-    local viewportSize = camera.ViewportSize
-    local centerX = viewportSize.X / 2
-    local centerY = viewportSize.Y / 2 - 30 -- сдвиг, как у круга
     
     for _, plr in ipairs(game.Players:GetPlayers()) do
         if plr == player then continue end
@@ -311,7 +389,6 @@ local function UpdateESP()
             if obj.highlight then obj.highlight.Enabled = false end
             if obj.lookArrow then obj.lookArrow.Visible = false end
             if obj.lookArrowTip then obj.lookArrowTip.Visible = false end
-            if obj.tracer then obj.tracer.Visible = false end
             continue
         end
         
@@ -354,27 +431,6 @@ local function UpdateESP()
             obj.teamLabel.TextColor3 = teamColor
         else
             if obj.teamLabel then obj.teamLabel.Visible = false end
-        end
-        
-        -- TRACER (линия от центра FOV к голове)
-        if cfg.ShowTracers and obj.tracer then
-            local dx = headPos.X - centerX
-            local dy = headPos.Y - centerY
-            local length = math.sqrt(dx*dx + dy*dy)
-            local angle = math.atan2(dy, dx)
-            
-            if length > 0 then
-                obj.tracer.Visible = true
-                obj.tracer.Size = UDim2.new(0, length, 0, 2)
-                obj.tracer.Position = UDim2.new(0, centerX, 0, centerY)
-                obj.tracer.Rotation = math.deg(angle)
-                obj.tracer.BackgroundColor3 = teamColor
-                obj.tracer.BackgroundTransparency = 0.3
-            else
-                obj.tracer.Visible = false
-            end
-        else
-            if obj.tracer then obj.tracer.Visible = false end
         end
         
         if cfg.ShowLookDirection then
@@ -441,27 +497,23 @@ local function UpdateESP()
     end
 end
 
-game:GetService("RunService").RenderStepped:Connect(UpdateESP)
-
-game.Players.PlayerRemoving:Connect(function(plr)
-    if espObjects[plr.Name] then RemoveESPObjects(plr.Name) end
+-- ============================================================
+-- ===== ЗАПУСК =====
+-- ============================================================
+game:GetService("RunService").RenderStepped:Connect(function()
+    UpdateESP()
+    UpdateTracers()
 end)
 
-for _, plr in ipairs(game.Players:GetPlayers()) do
-    if plr ~= player then
-        plr.CharacterAdded:Connect(function()
-            task.wait(0.3)
-            if espObjects[plr.Name] then
-                RemoveESPObjects(plr.Name)
-                CreateESPObjects(plr)
-            end
-        end)
-    end
-end
+game:GetService("RunService").Heartbeat:Connect(function()
+    if aimbotEnabled and not lockedTarget then findTarget() end
+end)
 
 player.CharacterAdded:Connect(function()
-    task.wait(0.3)
-    ClearESP()
+    wait(1)
+    aimbotEnabled = false
+    lockedTarget = nil
+    DestroyFOVCircle()
 end)
 
 -- ============================================================
@@ -796,6 +848,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals (Tracers) загружены",
+    Content = "Аимбот + Visuals (Идеальные Tracers) загружены",
     Duration = 3
 })
