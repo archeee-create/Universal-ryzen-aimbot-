@@ -1,8 +1,84 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + ПРОФЕССИОНАЛЬНЫЕ TRACERS
+-- Zenle — Neonsystem (FULL)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
+-- ============================================================
+-- ===== НЕОНОВО-ФИОЛЕТОВАЯ ТЕМА =====
+-- ============================================================
+local NeonPurpleTheme = {
+    TextColor = Color3.fromRGB(220, 200, 255),
+    Background = Color3.fromRGB(8, 0, 20),
+    Topbar = Color3.fromRGB(20, 5, 45),
+    Shadow = Color3.fromRGB(0, 0, 0),
+
+    NotificationBackground = Color3.fromRGB(15, 0, 40),
+    NotificationActionsBackground = Color3.fromRGB(40, 10, 80),
+
+    TabBackground = Color3.fromRGB(50, 20, 100),
+    TabStroke = Color3.fromRGB(100, 40, 200),
+    TabBackgroundSelected = Color3.fromRGB(180, 80, 255),
+    TabTextColor = Color3.fromRGB(180, 150, 220),
+    SelectedTabTextColor = Color3.fromRGB(255, 255, 255),
+
+    ElementBackground = Color3.fromRGB(30, 10, 60),
+    ElementBackgroundHover = Color3.fromRGB(60, 20, 120),
+    SecondaryElementBackground = Color3.fromRGB(20, 5, 50),
+    ElementStroke = Color3.fromRGB(80, 30, 160),
+    SecondaryElementStroke = Color3.fromRGB(50, 15, 100),
+
+    SliderBackground = Color3.fromRGB(60, 20, 130),
+    SliderProgress = Color3.fromRGB(200, 100, 255),
+    SliderStroke = Color3.fromRGB(150, 60, 220),
+
+    ToggleBackground = Color3.fromRGB(25, 5, 60),
+    ToggleEnabled = Color3.fromRGB(180, 80, 255),
+    ToggleDisabled = Color3.fromRGB(60, 30, 90),
+    ToggleEnabledStroke = Color3.fromRGB(220, 120, 255),
+    ToggleDisabledStroke = Color3.fromRGB(80, 40, 120),
+    ToggleEnabledOuterStroke = Color3.fromRGB(150, 50, 220),
+    ToggleDisabledOuterStroke = Color3.fromRGB(50, 20, 80),
+
+    DropdownSelected = Color3.fromRGB(60, 20, 130),
+    DropdownUnselected = Color3.fromRGB(35, 10, 80),
+
+    InputBackground = Color3.fromRGB(25, 5, 60),
+    InputStroke = Color3.fromRGB(80, 30, 160),
+    PlaceholderColor = Color3.fromRGB(150, 120, 200)
+}
+
+-- ============================================================
+-- ===== КАСТОМНОЕ УВЕДОМЛЕНИЕ (БЕЗ RAYFIELD) =====
+-- ============================================================
+local function Notify(title, content, duration)
+    Rayfield:Notify({
+        Title = title or "Zenle",
+        Content = content or "",
+        Duration = duration or 3
+    })
+end
+
+-- ============================================================
+-- ===== ОКНО ZENLE =====
+-- ============================================================
+local Window = Rayfield:CreateWindow({
+    Name = "Zenle",
+    Theme = NeonPurpleTheme,
+    Icon = 99658980981872,
+    LoadingTitle = false,
+    ConfigurationSaving = { Enabled = false }
+})
+
+Notify("Zenle", "Неоновая система загружена", 3)
+
+-- ============================================================
+-- ===== ВКЛАДКИ =====
+-- ============================================================
+local MainTab = Window:CreateTab({ name = "Aimbot", icon = "🎯" })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = "👁️" })
+
+-- ============================================================
 -- ===== СОХРАНЕНИЕ =====
-local saveFolder = "RyzenAimbot"
+-- ============================================================
+local saveFolder = "/storage/emulated/0/delta/workspace/Zenle"
 local saveFile = "settings.json"
 local fullPath = saveFolder .. "/" .. saveFile
 
@@ -27,8 +103,7 @@ local function loadSettings()
         showName = false,
         showTeam = false,
         showLookDirection = false,
-        showHighlight = false,
-        showTracers = false
+        showHighlight = false
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -51,24 +126,15 @@ local function saveSettings(data)
     end)
 end
 
--- ===== МЕНЮ =====
-local Window = Rayfield:CreateWindow({
-    Name = "Ryzen System",
-    ConfigurationSaving = { Enabled = false }
-})
-
-local MainTab = Window:CreateTab({ name = "Aimbot", icon = "🎯" })
-local VisualsTab = Window:CreateTab({ name = "Visuals", icon = "👁️" })
-
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
 
--- ============================================
--- FOV КРУГ (РАБОЧИЙ, СДВИНУТЫЙ)
--- ============================================
+-- ============================================================
+-- ===== FOV КРУГ =====
+-- ============================================================
 local fovSize = settings.fov
 local fovCircle = nil
 local circleFrame = nil
@@ -141,7 +207,6 @@ _G.ESP = {
     ShowTeam = false,
     ShowLookDirection = false,
     ShowHighlight = false,
-    ShowTracers = false,
 }
 
 local espObjects = {}
@@ -160,10 +225,7 @@ local function WorldToViewport(pos)
     return camera:WorldToViewportPoint(pos)
 end
 
--- ============================================================
--- ===== ПРОФЕССИОНАЛЬНЫЕ TRACERS (на основе чужих скриптов) =====
--- ============================================================
-local function CreateTracerObject(plr)
+local function CreateESPObjects(plr)
     if espObjects[plr.Name] then return end
     
     local gui = Instance.new("ScreenGui")
@@ -179,8 +241,7 @@ local function CreateTracerObject(plr)
         highlight = Instance.new("Highlight"),
         lookArrow = nil,
         lookArrowTip = nil,
-        arrowCreated = false,
-        tracer = Instance.new("Frame")
+        arrowCreated = false
     }
     
     obj.nameLabel.Size = UDim2.new(0, 200, 0, 20)
@@ -217,14 +278,6 @@ local function CreateTracerObject(plr)
     obj.highlight.Enabled = false
     obj.highlight.Parent = gui
     
-    -- TRACER (профессиональный подход: линия рисуется от центра FOV)
-    obj.tracer.Size = UDim2.new(0, 2, 0, 100)
-    obj.tracer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    obj.tracer.BackgroundTransparency = 0.3
-    obj.tracer.BorderSizePixel = 0
-    obj.tracer.Visible = false
-    obj.tracer.Parent = gui
-    
     local function AttachHighlight(char)
         if char then
             obj.highlight.Adornee = char
@@ -239,7 +292,7 @@ local function CreateTracerObject(plr)
         if espObjects[plr.Name] then
             espObjects[plr.Name].gui:Destroy()
             espObjects[plr.Name] = nil
-            CreateTracerObject(plr)
+            CreateESPObjects(plr)
         end
     end)
     
@@ -253,7 +306,6 @@ local function RemoveESPObjects(name)
     if obj.highlight then obj.highlight:Destroy() end
     if obj.lookArrow then obj.lookArrow:Destroy() end
     if obj.lookArrowTip then obj.lookArrowTip:Destroy() end
-    if obj.tracer then obj.tracer:Destroy() end
     espObjects[name] = nil
 end
 
@@ -264,91 +316,6 @@ local function ClearESP()
     espObjects = {}
 end
 
--- ============================================================
--- ===== ИДЕАЛЬНЫЕ TRACERS (ПРОФЕССИОНАЛЬНАЯ РЕАЛИЗАЦИЯ) =====
--- ============================================================
-local function UpdateTracers()
-    local cfg = _G.ESP
-    if not cfg.Enabled or not cfg.ShowTracers then
-        for _, obj in pairs(espObjects) do
-            if obj and obj.tracer then
-                obj.tracer.Visible = false
-            end
-        end
-        return
-    end
-    
-    -- Центр FOV-круга (с учётом сдвига)
-    local viewportSize = camera.ViewportSize
-    local centerX = viewportSize.X / 2
-    local centerY = viewportSize.Y / 2 - 30
-    
-    for _, plr in ipairs(game.Players:GetPlayers()) do
-        if plr == player then continue
-        local obj = espObjects[plr.Name]
-        if not obj or not obj.tracer then continue
-        
-        local head = plr.Character and plr.Character:FindFirstChild("Head")
-        if not head then
-            obj.tracer.Visible = false
-            continue
-        end
-        
-        -- Получаем позицию на экране
-        local screenPos, onScreen = WorldToViewport(head.Position)
-        if not screenPos then
-            obj.tracer.Visible = false
-            continue
-        end
-        
-        local targetX = screenPos.X
-        local targetY = screenPos.Y
-        
-        -- Если цель за пределами экрана — рисуем линию к краю (как в профессиональных ESP)
-        if not onScreen then
-            local dx = targetX - centerX
-            local dy = targetY - centerY
-            if dx == 0 and dy == 0 then
-                obj.tracer.Visible = false
-                continue
-            end
-            
-            -- Находим точку пересечения с границей экрана
-            local maxDist = math.sqrt(viewportSize.X^2 + viewportSize.Y^2)
-            local scale = maxDist / math.sqrt(dx^2 + dy^2)
-            targetX = centerX + dx * scale
-            targetY = centerY + dy * scale
-            
-            -- Обрезаем до границ экрана
-            targetX = math.clamp(targetX, 0, viewportSize.X)
-            targetY = math.clamp(targetY, 0, viewportSize.Y)
-        end
-        
-        -- Вычисляем вектор и угол
-        local dx = targetX - centerX
-        local dy = targetY - centerY
-        local length = math.sqrt(dx^2 + dy^2)
-        
-        if length < 1 then
-            obj.tracer.Visible = false
-            continue
-        end
-        
-        local angle = math.atan2(dy, dx)
-        
-        -- Применяем к трассеру (как в профессиональных скриптах)
-        obj.tracer.Visible = true
-        obj.tracer.Size = UDim2.new(0, length, 0, 2)
-        obj.tracer.Position = UDim2.new(0, centerX, 0, centerY)
-        obj.tracer.Rotation = math.deg(angle)
-        obj.tracer.BackgroundColor3 = GetTeamColor(plr)
-        obj.tracer.BackgroundTransparency = 0.3
-    end
-end
-
--- ============================================================
--- ===== ОБНОВЛЕНИЕ ESP =====
--- ============================================================
 local function UpdateESP()
     local cfg = _G.ESP
     if not cfg.Enabled then
@@ -380,7 +347,7 @@ local function UpdateESP()
         local root = char:FindFirstChild("HumanoidRootPart")
         if not head or not root then continue end
         
-        if not espObjects[plr.Name] then CreateTracerObject(plr) end
+        if not espObjects[plr.Name] then CreateESPObjects(plr) end
         local obj = espObjects[plr.Name]
         
         local headPos, headOnScreen = WorldToViewport(head.Position)
@@ -501,23 +468,27 @@ local function UpdateESP()
     end
 end
 
--- ============================================================
--- ===== ЗАПУСК =====
--- ============================================================
-game:GetService("RunService").RenderStepped:Connect(function()
-    UpdateESP()
-    UpdateTracers()
+game:GetService("RunService").RenderStepped:Connect(UpdateESP)
+
+game.Players.PlayerRemoving:Connect(function(plr)
+    if espObjects[plr.Name] then RemoveESPObjects(plr.Name) end
 end)
 
-game:GetService("RunService").Heartbeat:Connect(function()
-    if aimbotEnabled and not lockedTarget then findTarget() end
-end)
+for _, plr in ipairs(game.Players:GetPlayers()) do
+    if plr ~= player then
+        plr.CharacterAdded:Connect(function()
+            task.wait(0.3)
+            if espObjects[plr.Name] then
+                RemoveESPObjects(plr.Name)
+                CreateESPObjects(plr)
+            end
+        end)
+    end
+end
 
 player.CharacterAdded:Connect(function()
-    wait(1)
-    aimbotEnabled = false
-    lockedTarget = nil
-    DestroyFOVCircle()
+    task.wait(0.3)
+    ClearESP()
 end)
 
 -- ============================================================
@@ -707,17 +678,9 @@ MainTab:CreateButton({
     callback = function()
         if aimbotEnabled then
             findTarget()
-            Rayfield:Notify({
-                Title = "Ryzen System",
-                Content = lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет",
-                Duration = 2
-            })
+            Notify("Zenle", lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет", 2)
         else
-            Rayfield:Notify({
-                Title = "Ryzen System",
-                Content = "Сначала включите аимбот!",
-                Duration = 2
-            })
+            Notify("Zenle", "Сначала включите аимбот!", 2)
         end
     end
 })
@@ -733,11 +696,7 @@ MainTab:CreateButton({
         settings.resistance = 0.85
         saveSettings(settings)
         UpdateFOVCircle(20)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Настройки сброшены",
-            Duration = 2
-        })
+        Notify("Zenle", "Настройки сброшены", 2)
     end
 })
 
@@ -798,16 +757,6 @@ VisualsTab:CreateToggle({
 })
 
 VisualsTab:CreateToggle({
-    name = "Tracers",
-    current = settings.showTracers,
-    callback = function(v)
-        settings.showTracers = v
-        _G.ESP.ShowTracers = v
-        saveSettings(settings)
-    end
-})
-
-VisualsTab:CreateToggle({
     name = "Look Direction",
     current = settings.showLookDirection,
     callback = function(v)
@@ -850,8 +799,4 @@ player.CharacterAdded:Connect(function()
     DestroyFOVCircle()
 end)
 
-Rayfield:Notify({
-    Title = "Ryzen System",
-    Content = "Аимбот + Visuals (Профессиональные Tracers) загружены",
-    Duration = 3
-})
+Notify("Zenle", "Готово. Наслаждайся.", 3)
