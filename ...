@@ -659,8 +659,9 @@ MainTab:CreateButton({
 })
 
 -- ============================================================
--- ===== ВКЛАДКА VISUALS =====
+-- ===== ВКЛАДКА VISUALS (СО ВСЕМИ ПЕРЕКЛЮЧАТЕЛЯМИ) =====
 -- ============================================================
+
 VisualsTab:CreateSection({ name = "FOV (обзор)" })
 
 VisualsTab:CreateSlider({
@@ -800,3 +801,5 @@ Rayfield:Notify({
     Content = "Аимбот + Visuals загружены. Сохранение в /delta/workspace",
     Duration = 3
 })
+
+print("Ryzen: Сохранение в папку: " .. saveFolder)
