@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + ИДЕАЛЬНЫЕ TRACERS
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + ПРОФЕССИОНАЛЬНЫЕ TRACERS
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -160,7 +160,10 @@ local function WorldToViewport(pos)
     return camera:WorldToViewportPoint(pos)
 end
 
-local function CreateESPObjects(plr)
+-- ============================================================
+-- ===== ПРОФЕССИОНАЛЬНЫЕ TRACERS (на основе чужих скриптов) =====
+-- ============================================================
+local function CreateTracerObject(plr)
     if espObjects[plr.Name] then return end
     
     local gui = Instance.new("ScreenGui")
@@ -214,7 +217,7 @@ local function CreateESPObjects(plr)
     obj.highlight.Enabled = false
     obj.highlight.Parent = gui
     
-    -- TRACER (идеальная линия)
+    -- TRACER (профессиональный подход: линия рисуется от центра FOV)
     obj.tracer.Size = UDim2.new(0, 2, 0, 100)
     obj.tracer.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     obj.tracer.BackgroundTransparency = 0.3
@@ -236,7 +239,7 @@ local function CreateESPObjects(plr)
         if espObjects[plr.Name] then
             espObjects[plr.Name].gui:Destroy()
             espObjects[plr.Name] = nil
-            CreateESPObjects(plr)
+            CreateTracerObject(plr)
         end
     end)
     
@@ -262,7 +265,7 @@ local function ClearESP()
 end
 
 -- ============================================================
--- ===== ИДЕАЛЬНЫЕ TRACERS (ОБНОВЛЁННЫЕ) =====
+-- ===== ИДЕАЛЬНЫЕ TRACERS (ПРОФЕССИОНАЛЬНАЯ РЕАЛИЗАЦИЯ) =====
 -- ============================================================
 local function UpdateTracers()
     local cfg = _G.ESP
@@ -275,9 +278,10 @@ local function UpdateTracers()
         return
     end
     
+    -- Центр FOV-круга (с учётом сдвига)
     local viewportSize = camera.ViewportSize
     local centerX = viewportSize.X / 2
-    local centerY = viewportSize.Y / 2 - 30 -- сдвиг, как у круга
+    local centerY = viewportSize.Y / 2 - 30
     
     for _, plr in ipairs(game.Players:GetPlayers()) do
         if plr == player then continue
@@ -290,7 +294,7 @@ local function UpdateTracers()
             continue
         end
         
-        -- Проецируем голову на экран
+        -- Получаем позицию на экране
         local screenPos, onScreen = WorldToViewport(head.Position)
         if not screenPos then
             obj.tracer.Visible = false
@@ -300,9 +304,8 @@ local function UpdateTracers()
         local targetX = screenPos.X
         local targetY = screenPos.Y
         
-        -- Если цель за пределами экрана — рисуем линию к краю
+        -- Если цель за пределами экрана — рисуем линию к краю (как в профессиональных ESP)
         if not onScreen then
-            -- Находим точку пересечения линии с границей экрана
             local dx = targetX - centerX
             local dy = targetY - centerY
             if dx == 0 and dy == 0 then
@@ -310,6 +313,7 @@ local function UpdateTracers()
                 continue
             end
             
+            -- Находим точку пересечения с границей экрана
             local maxDist = math.sqrt(viewportSize.X^2 + viewportSize.Y^2)
             local scale = maxDist / math.sqrt(dx^2 + dy^2)
             targetX = centerX + dx * scale
@@ -320,7 +324,7 @@ local function UpdateTracers()
             targetY = math.clamp(targetY, 0, viewportSize.Y)
         end
         
-        -- Вычисляем длину и угол линии
+        -- Вычисляем вектор и угол
         local dx = targetX - centerX
         local dy = targetY - centerY
         local length = math.sqrt(dx^2 + dy^2)
@@ -332,7 +336,7 @@ local function UpdateTracers()
         
         local angle = math.atan2(dy, dx)
         
-        -- Применяем к трассеру
+        -- Применяем к трассеру (как в профессиональных скриптах)
         obj.tracer.Visible = true
         obj.tracer.Size = UDim2.new(0, length, 0, 2)
         obj.tracer.Position = UDim2.new(0, centerX, 0, centerY)
@@ -376,7 +380,7 @@ local function UpdateESP()
         local root = char:FindFirstChild("HumanoidRootPart")
         if not head or not root then continue end
         
-        if not espObjects[plr.Name] then CreateESPObjects(plr) end
+        if not espObjects[plr.Name] then CreateTracerObject(plr) end
         local obj = espObjects[plr.Name]
         
         local headPos, headOnScreen = WorldToViewport(head.Position)
@@ -848,6 +852,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals (Идеальные Tracers) загружены",
+    Content = "Аимбот + Visuals (Профессиональные Tracers) загружены",
     Duration = 3
 })
