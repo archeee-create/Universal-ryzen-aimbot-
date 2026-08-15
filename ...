@@ -1,8 +1,8 @@
--- Zenle — Neonsystem (FULL)
+-- Zenle — Neonsystem (FULL FIXED + КАСТОМНЫЙ БАННЕР)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ============================================================
--- ===== НЕОНОВО-ФИОЛЕТОВАЯ ТЕМА =====
+-- ===== ПОЛНАЯ НЕОНОВО-ФИОЛЕТОВАЯ ТЕМА =====
 -- ============================================================
 local NeonPurpleTheme = {
     TextColor = Color3.fromRGB(220, 200, 255),
@@ -42,11 +42,48 @@ local NeonPurpleTheme = {
 
     InputBackground = Color3.fromRGB(25, 5, 60),
     InputStroke = Color3.fromRGB(80, 30, 160),
-    PlaceholderColor = Color3.fromRGB(150, 120, 200)
+    PlaceholderColor = Color3.fromRGB(150, 120, 200),
+
+    ScrollBarBackground = Color3.fromRGB(20, 5, 50),
+    ScrollBarThumb = Color3.fromRGB(120, 50, 200),
+    ScrollBarThumbHover = Color3.fromRGB(160, 70, 230),
+
+    DropdownItemBackground = Color3.fromRGB(30, 10, 60),
+    DropdownItemBackgroundHover = Color3.fromRGB(60, 20, 120),
+
+    SliderTrack = Color3.fromRGB(40, 15, 80),
+    SliderFill = Color3.fromRGB(200, 100, 255),
+
+    ToggleKnob = Color3.fromRGB(255, 255, 255),
+    ToggleKnobEnabled = Color3.fromRGB(220, 120, 255),
+
+    InputPlaceholder = Color3.fromRGB(150, 120, 200),
+    InputText = Color3.fromRGB(220, 200, 255),
+
+    ButtonBackground = Color3.fromRGB(30, 10, 60),
+    ButtonBackgroundHover = Color3.fromRGB(60, 20, 120),
+    ButtonText = Color3.fromRGB(220, 200, 255),
+    ButtonTextHover = Color3.fromRGB(255, 255, 255),
+
+    SectionBackground = Color3.fromRGB(15, 0, 40),
+    SectionText = Color3.fromRGB(180, 150, 220),
+
+    DropdownText = Color3.fromRGB(220, 200, 255),
+    DropdownTextSelected = Color3.fromRGB(255, 255, 255),
+
+    SliderText = Color3.fromRGB(220, 200, 255),
+    SliderValueText = Color3.fromRGB(200, 100, 255),
+
+    ToggleText = Color3.fromRGB(220, 200, 255),
+    ToggleTextEnabled = Color3.fromRGB(255, 255, 255),
+
+    -- Баннер (фиолетовый + твой логотип)
+    BannerBackground = Color3.fromRGB(20, 5, 45),
+    BannerIcon = "rbxassetid://99658980981872"
 }
 
 -- ============================================================
--- ===== КАСТОМНОЕ УВЕДОМЛЕНИЕ (БЕЗ RAYFIELD) =====
+-- ===== КАСТОМНОЕ УВЕДОМЛЕНИЕ =====
 -- ============================================================
 local function Notify(title, content, duration)
     Rayfield:Notify({
@@ -67,6 +104,30 @@ local Window = Rayfield:CreateWindow({
     ConfigurationSaving = { Enabled = false }
 })
 
+-- ============================================================
+-- ===== КАСТОМИЗАЦИЯ БАННЕРА =====
+-- ============================================================
+local function CustomizeBanner()
+    for _, gui in ipairs(game:GetService("CoreGui"):GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Name == "Rayfield" then
+            for _, child in ipairs(gui:GetChildren()) do
+                if child:IsA("ImageLabel") and child.Name == "Banner" then
+                    child.BackgroundColor3 = Color3.fromRGB(20, 5, 45)
+                    child.BackgroundTransparency = 0
+                    child.Image = "rbxassetid://99658980981872"
+                    child.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                    child.ImageTransparency = 0
+                    child.BackgroundTransparency = 0.2
+                end
+            end
+        end
+    end
+end
+
+-- Ждём, пока баннер создастся, и меняем его
+task.wait(0.2)
+CustomizeBanner()
+
 Notify("Zenle", "Неоновая система загружена", 3)
 
 -- ============================================================
@@ -74,6 +135,7 @@ Notify("Zenle", "Неоновая система загружена", 3)
 -- ============================================================
 local MainTab = Window:CreateTab({ name = "Aimbot", icon = "🎯" })
 local VisualsTab = Window:CreateTab({ name = "Visuals", icon = "👁️" })
+local SettingsTab = Window:CreateTab({ name = "Settings", icon = "⚙️" })
 
 -- ============================================================
 -- ===== СОХРАНЕНИЕ =====
@@ -271,7 +333,7 @@ local function CreateESPObjects(plr)
     obj.teamLabel.Visible = false
     obj.teamLabel.Parent = gui
     
-    obj.highlight.Name = "RyzenHighlight"
+    obj.highlight.Name = "ZenleHighlight"
     obj.highlight.FillTransparency = 0.5
     obj.highlight.OutlineTransparency = 0.3
     obj.highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
@@ -763,6 +825,38 @@ VisualsTab:CreateToggle({
         settings.showLookDirection = v
         _G.ESP.ShowLookDirection = v
         saveSettings(settings)
+    end
+})
+
+-- ============================================================
+-- ===== ВКЛАДКА SETTINGS =====
+-- ============================================================
+SettingsTab:CreateSection({ name = "Общие" })
+
+SettingsTab:CreateToggle({
+    name = "Закрепить меню",
+    current = false,
+    callback = function(v)
+        Window:SetDraggable(not v)
+    end
+})
+
+SettingsTab:CreateButton({
+    name = "Закрыть меню",
+    callback = function()
+        Window:Destroy()
+        Notify("Zenle", "Меню закрыто", 2)
+    end
+})
+
+SettingsTab:CreateButton({
+    name = "Перезапустить скрипт",
+    callback = function()
+        Notify("Zenle", "Перезапуск...", 2)
+        task.wait(0.5)
+        Window:Destroy()
+        task.wait(0.5)
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/archeee-create/Universal-ryzen-aimbot-/refs/heads/main/main.lua"))()
     end
 })
 
