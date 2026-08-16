@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + КНОПКА AIM (вместо биндов)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + КНОПКА AIM + VISUALS
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -57,6 +57,7 @@ local Window = Rayfield:CreateWindow({
 })
 
 local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 }) -- ← ВКЛАДКА СОЗДАНА
 
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -65,17 +66,13 @@ local lockedTarget = nil
 local settings = loadSettings()
 
 -- ============================================================
--- ===== КНОПКА AIM (вместо биндов) =====
+-- ===== ПЛАВАЮЩАЯ КНОПКА AIM =====
 -- ============================================================
-local floatingGui = nil
-local floatingFrame = nil
 local aimButton = nil
 local aimLabel = nil
+local floatingGui = nil
 
-local function ToggleAimbot()
-    aimbotEnabled = not aimbotEnabled
-    
-    -- Обновляем кнопку
+local function UpdateAimButton()
     if aimButton then
         if aimbotEnabled then
             aimButton.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
@@ -85,8 +82,12 @@ local function ToggleAimbot()
             aimLabel.Text = "AIM OFF"
         end
     end
+end
+
+local function ToggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    UpdateAimButton()
     
-    -- Синхронизируем тоггл в Rayfield
     if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
         MainTab.toggles.AimbotToggle:Set(aimbotEnabled)
     end
@@ -118,42 +119,40 @@ local function CreateFloatingButton()
     floatingGui.ResetOnSpawn = false
     floatingGui.Parent = player.PlayerGui
 
-    floatingFrame = Instance.new("Frame")
-    floatingFrame.Size = UDim2.new(0, 120, 0, 120)
-    floatingFrame.Position = UDim2.new(0, 150, 0, 40)
-    floatingFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    floatingFrame.BackgroundTransparency = 0.05
-    floatingFrame.BorderSizePixel = 2
-    floatingFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
-    floatingFrame.ZIndex = 100
-    floatingFrame.Parent = floatingGui
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 120, 0, 120)
+    frame.Position = UDim2.new(0, 20, 0, 100)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    frame.BackgroundTransparency = 0.05
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.ZIndex = 100
+    frame.Parent = floatingGui
 
     local frameCorner = Instance.new("UICorner")
     frameCorner.CornerRadius = UDim.new(0, 12)
-    frameCorner.Parent = floatingFrame
+    frameCorner.Parent = frame
 
-    -- Заголовок
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.Position = UDim2.new(0, 0, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "AIMBOT"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 14
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.ZIndex = 101
-    titleLabel.Parent = floatingFrame
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 20)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "AIMBOT"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamBold
+    title.ZIndex = 101
+    title.Parent = frame
 
-    -- Сама кнопка
     aimButton = Instance.new("TextButton")
     aimButton.Size = UDim2.new(0, 80, 0, 50)
-    aimButton.Position = UDim2.new(0.5, -40, 0, 45)
+    aimButton.Position = UDim2.new(0.5, -40, 0.5, -15)
     aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     aimButton.BackgroundTransparency = 0.2
     aimButton.BorderSizePixel = 2
     aimButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
     aimButton.ZIndex = 102
-    aimButton.Parent = floatingFrame
+    aimButton.Parent = frame
 
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 8)
@@ -164,12 +163,13 @@ local function CreateFloatingButton()
     aimLabel.BackgroundTransparency = 1
     aimLabel.Text = "AIM OFF"
     aimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    aimLabel.TextSize = 18
+    aimLabel.TextSize = 14
     aimLabel.Font = Enum.Font.GothamBold
     aimLabel.ZIndex = 103
     aimLabel.Parent = aimButton
 
     aimButton.MouseButton1Click:Connect(ToggleAimbot)
+    UpdateAimButton()
 end
 
 -- ============================================================
@@ -625,8 +625,10 @@ local function findTarget()
 end
 
 -- ============================================================
--- ===== GUI (Rayfield) =====
+-- ===== GUI =====
 -- ============================================================
+MainTab:CreateSection({ name = "Aimbot" })
+
 local aimbotToggle = MainTab:CreateToggle({
     name = "Включить аимбот",
     current = false,
@@ -635,24 +637,15 @@ local aimbotToggle = MainTab:CreateToggle({
         if v then
             CreateFOVCircle()
             findTarget()
-            if aimButton then
-                aimButton.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
-                aimLabel.Text = "AIM ON"
-            end
         else
             DestroyFOVCircle()
             lockedTarget = nil
-            if aimButton then
-                aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-                aimLabel.Text = "AIM OFF"
-            end
         end
+        UpdateAimButton()
     end
 })
 
--- Сохраняем тоггл для синхронизации
-if not MainTab.toggles then MainTab.toggles = {} end
-MainTab.toggles.AimbotToggle = aimbotToggle
+MainTab.toggles = { AimbotToggle = aimbotToggle }
 
 MainTab:CreateSection({ name = "Настройки" })
 
@@ -665,7 +658,7 @@ MainTab:CreateSlider({
     callback = function(v)
         settings.fov = v
         saveSettings(settings)
-        UpdateFOVCircle(v)
+        UpdateFOWCircle(v)
     end
 })
 
@@ -722,8 +715,79 @@ MainTab:CreateSlider({
 })
 
 -- ============================================================
+-- ===== ВКЛАДКА VISUALS (ТЕПЕРЬ ТУТ ЕСТЬ ПЕРЕКЛЮЧАТЕЛИ) =====
+-- ============================================================
+VisualsTab:CreateSection({ name = "Настройки" })
+
+VisualsTab:CreateToggle({
+    name = "ESP",
+    current = settings.espEnabled,
+    callback = function(v)
+        settings.espEnabled = v
+        _G.ESP.Enabled = v
+        saveSettings(settings)
+        if not v then ClearESP() end
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Name",
+    current = settings.showName,
+    callback = function(v)
+        settings.showName = v
+        _G.ESP.ShowName = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Distance",
+    current = settings.showDistance,
+    callback = function(v)
+        settings.showDistance = v
+        _G.ESP.ShowDistance = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Team",
+    current = settings.showTeam,
+    callback = function(v)
+        settings.showTeam = v
+        _G.ESP.ShowTeam = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Highlight",
+    current = settings.showHighlight,
+    callback = function(v)
+        settings.showHighlight = v
+        _G.ESP.ShowHighlight = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Look Direction",
+    current = settings.showLookDirection,
+    callback = function(v)
+        settings.showLookDirection = v
+        _G.ESP.ShowLookDirection = v
+        saveSettings(settings)
+    end
+})
+
+-- ============================================================
 -- ===== ЗАПУСК =====
 -- ============================================================
+CreateFloatingButton()
+task.wait(2)
+-- Поиск кнопки Grab (если нужен)
+-- FindAndBindGrabButton()
+
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
     if not lockedTarget or not lockedTarget.Character then
@@ -752,19 +816,11 @@ player.CharacterAdded:Connect(function()
     aimbotEnabled = false
     lockedTarget = nil
     DestroyFOVCircle()
-    if aimButton then
-        aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        aimLabel.Text = "AIM OFF"
-    end
+    UpdateAimButton()
 end)
-
--- ============================================================
--- ===== СОЗДАЁМ ПЛАВАЮЩУЮ КНОПКУ =====
--- ============================================================
-CreateFloatingButton()
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот загружен. Кнопка AIM — включить/выключить.",
-    Duration = 4
+    Content = "Аимбот + Visuals загружены",
+    Duration = 3
 })
