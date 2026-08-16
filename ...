@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + ESP + FOV КРУГ (сдвинутый)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Keybind
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -27,7 +27,8 @@ local function loadSettings()
         showName = false,
         showTeam = false,
         showLookDirection = false,
-        showHighlight = false
+        showHighlight = false,
+        aimbotKeybind = "F"
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -56,17 +57,18 @@ local Window = Rayfield:CreateWindow({
     ConfigurationSaving = { Enabled = false }
 })
 
-local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })          -- ← БЫЛО "Главная"
-local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })      -- ← БЫЛО "ESP"
+local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })
 
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
+local currentKeybind = settings.aimbotKeybind or "F"
 
 -- ============================================
--- FOV КРУГ (РАБОЧИЙ, СДВИНУТЫЙ)
+-- FOV КРУГ
 -- ============================================
 local fovSize = settings.fov
 local fovCircle = nil
@@ -128,6 +130,25 @@ local function UpdateFOVCircle(newSize)
         }
     )
     tween:Play()
+end
+
+-- ============================================================
+-- ===== КЛЮЧЕВАЯ ПРИВЯЗКА =====
+-- ============================================================
+local function ToggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    if aimbotEnabled then
+        CreateFOVCircle()
+        findTarget()
+    else
+        DestroyFOVCircle()
+        lockedTarget = nil
+    end
+    Rayfield:Notify({
+        Title = "Ryzen System",
+        Content = aimbotEnabled and "Аимбот ВКЛЮЧЕН" or "Аимбот ВЫКЛЮЧЕН",
+        Duration = 1.5
+    })
 end
 
 -- ============================================================
@@ -537,6 +558,33 @@ MainTab:CreateToggle({
     end
 })
 
+-- ============================================================
+-- ===== KEYBIND =====
+-- ============================================================
+MainTab:CreateKeybind({
+    name = "Клавиша включения",
+    currentKeybind = currentKeybind,
+    flag = "AimbotKeybind",
+    callback = function(Key)
+        currentKeybind = Key
+        settings.aimbotKeybind = Key
+        saveSettings(settings)
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Клавиша: " .. Key,
+            Duration = 2
+        })
+    end
+})
+
+-- Обработка нажатия клавиши
+game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode[currentKeybind] then
+        ToggleAimbot()
+    end
+end)
+
 MainTab:CreateSection({ name = "Настройки" })
 
 MainTab:CreateSlider({
@@ -635,6 +683,8 @@ MainTab:CreateButton({
         settings.visibleCheck = true
         settings.ignoreTeam = false
         settings.resistance = 0.85
+        settings.aimbotKeybind = "F"
+        currentKeybind = "F"
         saveSettings(settings)
         UpdateFOVCircle(20)
         Rayfield:Notify({
@@ -746,6 +796,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals + FOV круг загружены",
+    Content = "Аимбот + Keybind загружены",
     Duration = 3
 })
