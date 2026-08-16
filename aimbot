@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Keybind
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Только Keybind (без переключателя)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -140,15 +140,20 @@ local function ToggleAimbot()
     if aimbotEnabled then
         CreateFOVCircle()
         findTarget()
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВКЛЮЧЕН",
+            Duration = 1.5
+        })
     else
         DestroyFOVCircle()
         lockedTarget = nil
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВЫКЛЮЧЕН",
+            Duration = 1.5
+        })
     end
-    Rayfield:Notify({
-        Title = "Ryzen System",
-        Content = aimbotEnabled and "Аимбот ВКЛЮЧЕН" or "Аимбот ВЫКЛЮЧЕН",
-        Duration = 1.5
-    })
 end
 
 -- ============================================================
@@ -543,26 +548,11 @@ end
 -- ============================================================
 MainTab:CreateSection({ name = "Aimbot" })
 
-MainTab:CreateToggle({
-    name = "Включить аимбот",
-    current = false,
-    callback = function(v)
-        aimbotEnabled = v
-        if v then
-            CreateFOVCircle()
-            findTarget()
-        else
-            DestroyFOVCircle()
-            lockedTarget = nil
-        end
-    end
-})
-
 -- ============================================================
--- ===== KEYBIND =====
+-- ===== KEYBIND (без переключателя) =====
 -- ============================================================
 MainTab:CreateKeybind({
-    name = "Клавиша включения",
+    name = "Клавиша включения аимбота",
     currentKeybind = currentKeybind,
     flag = "AimbotKeybind",
     callback = function(Key)
