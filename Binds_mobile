@@ -1,4 +1,4 @@
--- Rayfield Gen2 — Меню с постепенным ростом до 6 слотов
+-- Rayfield Gen2 — Клавиши (без блокировки мобильного управления)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 local Window = Rayfield:CreateWindow({
@@ -37,7 +37,6 @@ local buttons = {}
 local activeKeys = {}
 local slotNames = {}
 
--- Количество видимых слотов (растёт постепенно)
 local visibleSlots = 0
 
 local function UpdateMenuSize()
@@ -48,13 +47,36 @@ local function UpdateMenuSize()
     contentFrame.Size = UDim2.new(1, 0, 1, -30)
 end
 
+-- ============================================================
+-- ===== ЭМУЛЯЦИЯ КЛАВИШ (БЕЗ БЛОКИРОВКИ УПРАВЛЕНИЯ) =====
+-- ============================================================
+local function PressKey(keyCode)
+    if not keyCode then return end
+    -- ОТПРАВЛЯЕМ СОБЫТИЕ, НО НЕ БЛОКИРУЕМ ВВОД
+    game:GetService("VirtualInputManager"):SendKeyEvent(true, keyCode, false, game)
+    task.wait(0.05)
+    game:GetService("VirtualInputManager"):SendKeyEvent(false, keyCode, false, game)
+end
+
+local function HoldKey(keyCode)
+    if not keyCode then return end
+    game:GetService("VirtualInputManager"):SendKeyEvent(true, keyCode, false, game)
+end
+
+local function ReleaseKey(keyCode)
+    if not keyCode then return end
+    game:GetService("VirtualInputManager"):SendKeyEvent(false, keyCode, false, game)
+end
+
+-- ============================================================
+-- ===== СОЗДАНИЕ СЛОТОВ =====
+-- ============================================================
 local function RebuildButtons()
     for letter, btn in pairs(buttons) do
         btn:Destroy()
     end
     buttons = {}
 
-    -- Показываем только `visibleSlots` слотов
     for i = 1, math.min(visibleSlots, MAX_KEYS) do
         local letter = activeKeys[i] or ""
         local slotName = slotNames[letter] or letter or ""
@@ -147,14 +169,13 @@ local function RebuildButtons()
             clickBtn.ZIndex = 105
             clickBtn.Parent = btn
 
+            -- НАЖАТИЕ (ЭМУЛЯЦИЯ БЕЗ БЛОКИРОВКИ)
             clickBtn.MouseButton1Down:Connect(function()
                 if not isPressed then
                     isPressed = true
                     btn.BackgroundColor3 = Color3.fromRGB(220, 220, 230)
                     label.TextColor3 = Color3.fromRGB(80, 80, 90)
-                    if keyCode then
-                        game:GetService("VirtualInputManager"):SendKeyEvent(true, keyCode, false, game)
-                    end
+                    HoldKey(keyCode)
                 end
             end)
 
@@ -163,9 +184,7 @@ local function RebuildButtons()
                     isPressed = false
                     btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
                     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    if keyCode then
-                        game:GetService("VirtualInputManager"):SendKeyEvent(false, keyCode, false, game)
-                    end
+                    ReleaseKey(keyCode)
                 end
             end)
 
@@ -174,9 +193,7 @@ local function RebuildButtons()
                     isPressed = false
                     btn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
                     label.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    if keyCode then
-                        game:GetService("VirtualInputManager"):SendKeyEvent(false, keyCode, false, game)
-                    end
+                    ReleaseKey(keyCode)
                 end
             end)
 
@@ -297,8 +314,6 @@ local function AddKey(letter)
     end
 
     table.insert(activeKeys, letter)
-    
-    -- Увеличиваем количество видимых слотов (макс. 6)
     if visibleSlots < MAX_KEYS then
         visibleSlots = visibleSlots + 1
     end
@@ -319,12 +334,9 @@ local function RemoveKey(letter)
             break
         end
     end
-    
-    -- Если активных клавиш стало меньше, чем видимых слотов — уменьшаем видимые слоты
     if #activeKeys < visibleSlots then
         visibleSlots = math.max(1, #activeKeys)
     end
-    
     RebuildButtons()
     if #activeKeys == 0 then
         visibleSlots = 0
@@ -359,6 +371,6 @@ CreateFloatingMenu()
 
 Rayfield:Notify({
     Title = "Keyboard",
-    Content = "Меню растёт до 6 слотов. Карандаш ✏️ для названия.",
+    Content = "Клавиши без блокировки управления",
     Duration = 3
 })
