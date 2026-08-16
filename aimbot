@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Только Keybind (без переключателя)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Keybind (пустое поле)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -28,7 +28,7 @@ local function loadSettings()
         showTeam = false,
         showLookDirection = false,
         showHighlight = false,
-        aimbotKeybind = "F"
+        aimbotKeybind = ""  -- ← ПУСТО ПО УМОЛЧАНИЮ
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -51,6 +51,19 @@ local function saveSettings(data)
     end)
 end
 
+-- ===== КАСТОМНОЕ УВЕДОМЛЕНИЕ =====
+local function Notify(title, content, duration)
+    if Rayfield.Notify then
+        Rayfield:Notify({
+            Title = title or "Ryzen System",
+            Content = content or "",
+            Duration = duration or 3
+        })
+    else
+        print("[Ryzen System] " .. content)
+    end
+end
+
 -- ===== МЕНЮ =====
 local Window = Rayfield:CreateWindow({
     Name = "Ryzen System",
@@ -65,7 +78,7 @@ local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
-local currentKeybind = settings.aimbotKeybind or "F"
+local currentKeybind = settings.aimbotKeybind or ""
 
 -- ============================================
 -- FOV КРУГ
@@ -140,19 +153,11 @@ local function ToggleAimbot()
     if aimbotEnabled then
         CreateFOVCircle()
         findTarget()
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Аимбот ВКЛЮЧЕН",
-            Duration = 1.5
-        })
+        Notify("Ryzen System", "Аимбот ВКЛЮЧЕН", 1.5)
     else
         DestroyFOVCircle()
         lockedTarget = nil
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Аимбот ВЫКЛЮЧЕН",
-            Duration = 1.5
-        })
+        Notify("Ryzen System", "Аимбот ВЫКЛЮЧЕН", 1.5)
     end
 end
 
@@ -549,29 +554,36 @@ end
 MainTab:CreateSection({ name = "Aimbot" })
 
 -- ============================================================
--- ===== KEYBIND (без переключателя) =====
+-- ===== KEYBIND (пустое поле) =====
 -- ============================================================
 MainTab:CreateKeybind({
     name = "Клавиша включения аимбота",
     currentKeybind = currentKeybind,
-    flag = "AimbotKeybind",
+    flag = "AimbotKeybind_Main",
     callback = function(Key)
-        currentKeybind = Key
-        settings.aimbotKeybind = Key
-        saveSettings(settings)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Клавиша: " .. Key,
-            Duration = 2
-        })
+        if Key and Key.Name then
+            currentKeybind = Key.Name
+            settings.aimbotKeybind = Key.Name
+            saveSettings(settings)
+            Notify("Ryzen System", "Клавиша: " .. Key.Name, 2)
+        else
+            currentKeybind = ""
+            settings.aimbotKeybind = ""
+            saveSettings(settings)
+            Notify("Ryzen System", "Клавиша удалена", 2)
+        end
     end
 })
 
--- Обработка нажатия клавиши
+-- Обработка нажатия клавиши (только если кейбинд задан)
 game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
     if processed then return end
-    if input.KeyCode == Enum.KeyCode[currentKeybind] then
-        ToggleAimbot()
+    if currentKeybind == "" then return end -- если клавиша не задана — игнорируем
+    if input.KeyCode then
+        local keyName = input.KeyCode.Name
+        if keyName == currentKeybind then
+            ToggleAimbot()
+        end
     end
 end)
 
@@ -583,6 +595,7 @@ MainTab:CreateSlider({
     increment = 1,
     suffix = " px",
     current = settings.fov,
+    flag = "FOVSlider_Main",
     callback = function(v)
         settings.fov = v
         saveSettings(settings)
@@ -596,6 +609,7 @@ MainTab:CreateSlider({
     increment = 10,
     suffix = " studs",
     current = settings.maxDistance,
+    flag = "MaxDistance_Main",
     callback = function(v)
         settings.maxDistance = v
         saveSettings(settings)
@@ -606,6 +620,7 @@ MainTab:CreateDropdown({
     name = "Часть тела",
     options = {"Head", "HumanoidRootPart", "Torso"},
     current = settings.aimPart,
+    flag = "AimPart_Main",
     callback = function(v)
         settings.aimPart = v
         saveSettings(settings)
@@ -615,6 +630,7 @@ MainTab:CreateDropdown({
 MainTab:CreateToggle({
     name = "Проверка стен",
     current = settings.visibleCheck,
+    flag = "VisibleCheck_Main",
     callback = function(v)
         settings.visibleCheck = v
         saveSettings(settings)
@@ -624,6 +640,7 @@ MainTab:CreateToggle({
 MainTab:CreateToggle({
     name = "Игнорировать союзников",
     current = settings.ignoreTeam,
+    flag = "IgnoreTeam_Main",
     callback = function(v)
         settings.ignoreTeam = v
         saveSettings(settings)
@@ -636,6 +653,7 @@ MainTab:CreateSlider({
     increment = 0.01,
     suffix = "",
     current = settings.resistance,
+    flag = "Resistance_Main",
     callback = function(v)
         settings.resistance = v
         saveSettings(settings)
@@ -649,17 +667,9 @@ MainTab:CreateButton({
     callback = function()
         if aimbotEnabled then
             findTarget()
-            Rayfield:Notify({
-                Title = "Ryzen System",
-                Content = lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет",
-                Duration = 2
-            })
+            Notify("Ryzen System", lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет", 2)
         else
-            Rayfield:Notify({
-                Title = "Ryzen System",
-                Content = "Сначала включите аимбот!",
-                Duration = 2
-            })
+            Notify("Ryzen System", "Сначала включите аимбот!", 2)
         end
     end
 })
@@ -673,15 +683,11 @@ MainTab:CreateButton({
         settings.visibleCheck = true
         settings.ignoreTeam = false
         settings.resistance = 0.85
-        settings.aimbotKeybind = "F"
-        currentKeybind = "F"
+        settings.aimbotKeybind = ""
+        currentKeybind = ""
         saveSettings(settings)
         UpdateFOVCircle(20)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Настройки сброшены",
-            Duration = 2
-        })
+        Notify("Ryzen System", "Настройки сброшены", 2)
     end
 })
 
@@ -693,6 +699,7 @@ VisualsTab:CreateSection({ name = "Настройки" })
 VisualsTab:CreateToggle({
     name = "ESP",
     current = settings.espEnabled,
+    flag = "ESP_Visuals",
     callback = function(v)
         settings.espEnabled = v
         _G.ESP.Enabled = v
@@ -704,6 +711,7 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Name",
     current = settings.showName,
+    flag = "ShowName_Visuals",
     callback = function(v)
         settings.showName = v
         _G.ESP.ShowName = v
@@ -714,6 +722,7 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Distance",
     current = settings.showDistance,
+    flag = "ShowDistance_Visuals",
     callback = function(v)
         settings.showDistance = v
         _G.ESP.ShowDistance = v
@@ -724,6 +733,7 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Team",
     current = settings.showTeam,
+    flag = "ShowTeam_Visuals",
     callback = function(v)
         settings.showTeam = v
         _G.ESP.ShowTeam = v
@@ -734,6 +744,7 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Highlight",
     current = settings.showHighlight,
+    flag = "ShowHighlight_Visuals",
     callback = function(v)
         settings.showHighlight = v
         _G.ESP.ShowHighlight = v
@@ -744,6 +755,7 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Look Direction",
     current = settings.showLookDirection,
+    flag = "ShowLookDirection_Visuals",
     callback = function(v)
         settings.showLookDirection = v
         _G.ESP.ShowLookDirection = v
@@ -784,8 +796,4 @@ player.CharacterAdded:Connect(function()
     DestroyFOVCircle()
 end)
 
-Rayfield:Notify({
-    Title = "Ryzen System",
-    Content = "Аимбот + Keybind загружены",
-    Duration = 3
-})
+Notify("Ryzen System", "Аимбот + Keybind загружены", 3)
