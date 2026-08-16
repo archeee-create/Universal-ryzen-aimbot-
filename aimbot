@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Keybind (пустое поле)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Grab (выключение при захвате)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -27,8 +27,7 @@ local function loadSettings()
         showName = false,
         showTeam = false,
         showLookDirection = false,
-        showHighlight = false,
-        aimbotKeybind = ""  -- ← ПУСТО ПО УМОЛЧАНИЮ
+        showHighlight = false
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -51,19 +50,6 @@ local function saveSettings(data)
     end)
 end
 
--- ===== КАСТОМНОЕ УВЕДОМЛЕНИЕ =====
-local function Notify(title, content, duration)
-    if Rayfield.Notify then
-        Rayfield:Notify({
-            Title = title or "Ryzen System",
-            Content = content or "",
-            Duration = duration or 3
-        })
-    else
-        print("[Ryzen System] " .. content)
-    end
-end
-
 -- ===== МЕНЮ =====
 local Window = Rayfield:CreateWindow({
     Name = "Ryzen System",
@@ -78,7 +64,6 @@ local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
-local currentKeybind = settings.aimbotKeybind or ""
 
 -- ============================================
 -- FOV КРУГ
@@ -143,22 +128,6 @@ local function UpdateFOVCircle(newSize)
         }
     )
     tween:Play()
-end
-
--- ============================================================
--- ===== КЛЮЧЕВАЯ ПРИВЯЗКА =====
--- ============================================================
-local function ToggleAimbot()
-    aimbotEnabled = not aimbotEnabled
-    if aimbotEnabled then
-        CreateFOVCircle()
-        findTarget()
-        Notify("Ryzen System", "Аимбот ВКЛЮЧЕН", 1.5)
-    else
-        DestroyFOVCircle()
-        lockedTarget = nil
-        Notify("Ryzen System", "Аимбот ВЫКЛЮЧЕН", 1.5)
-    end
 end
 
 -- ============================================================
@@ -483,7 +452,7 @@ local function getTargetClosestToCenter()
     local myHead = player.Character and player.Character:FindFirstChild("Head")
     local myTeam = player.Team
 
-    for _, v in ipairs(game:GetService("Players"):GetPlayers()) do
+    for _, v in ipairs(game.Players:GetPlayers()) do
         if v == player or not v.Character then continue end
         if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
 
@@ -549,43 +518,94 @@ local function findTarget()
 end
 
 -- ============================================================
+-- ===== ПОИСК КНОПКИ "GRAB" (ВЫКЛЮЧАЕТ АИМБОТ) =====
+-- ============================================================
+local function FindAndBindGrabButton()
+    local playerGui = player.PlayerGui
+    local grabButton = nil
+    
+    -- Ищем по тексту Grab/Capture/Захват
+    for _, gui in ipairs(playerGui:GetDescendants()) do
+        if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+            local text = gui.Text and gui.Text:lower() or ""
+            local name = gui.Name and gui.Name:lower() or ""
+            if text:find("grab") or text:find("capture") or text:find("захват") or
+               name:find("grab") or name:find("capture") or name:find("захват") then
+                grabButton = gui
+                break
+            end
+        end
+    end
+    
+    -- Если не нашли — ищем по позиции (над прыжком)
+    if not grabButton then
+        local jumpButton = nil
+        for _, gui in ipairs(playerGui:GetDescendants()) do
+            if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                local text = gui.Text and gui.Text:lower() or ""
+                local name = gui.Name and gui.Name:lower() or ""
+                if text:find("прыжок") or text:find("jump") or name:find("прыжок") or name:find("jump") then
+                    jumpButton = gui
+                    break
+                end
+            end
+        end
+        
+        if jumpButton then
+            local jumpPos = jumpButton.AbsolutePosition
+            for _, gui in ipairs(playerGui:GetDescendants()) do
+                if gui:IsA("TextButton") or gui:IsA("ImageButton") then
+                    if gui == jumpButton then continue end
+                    local pos = gui.AbsolutePosition
+                    local size = gui.AbsoluteSize
+                    if pos.Y + size.Y <= jumpPos.Y and math.abs(pos.X - jumpPos.X) < 100 then
+                        grabButton = gui
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    if grabButton then
+        grabButton.MouseButton1Click:Connect(function()
+            if aimbotEnabled then
+                aimbotEnabled = false
+                DestroyFOVCircle()
+                lockedTarget = nil
+                if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
+                    MainTab.toggles.AimbotToggle:Set(false)
+                end
+                print("[Aimbot] Выключен при нажатии на Grab")
+            end
+        end)
+        print("[Aimbot] Кнопка Grab привязана")
+    else
+        print("[Aimbot] Кнопка Grab не найдена")
+    end
+end
+
+-- ============================================================
 -- ===== GUI =====
 -- ============================================================
 MainTab:CreateSection({ name = "Aimbot" })
 
--- ============================================================
--- ===== KEYBIND (пустое поле) =====
--- ============================================================
-MainTab:CreateKeybind({
-    name = "Клавиша включения аимбота",
-    currentKeybind = currentKeybind,
-    flag = "AimbotKeybind_Main",
-    callback = function(Key)
-        if Key and Key.Name then
-            currentKeybind = Key.Name
-            settings.aimbotKeybind = Key.Name
-            saveSettings(settings)
-            Notify("Ryzen System", "Клавиша: " .. Key.Name, 2)
+local aimbotToggle = MainTab:CreateToggle({
+    name = "Включить аимбот",
+    current = false,
+    callback = function(v)
+        aimbotEnabled = v
+        if v then
+            CreateFOVCircle()
+            findTarget()
         else
-            currentKeybind = ""
-            settings.aimbotKeybind = ""
-            saveSettings(settings)
-            Notify("Ryzen System", "Клавиша удалена", 2)
+            DestroyFOVCircle()
+            lockedTarget = nil
         end
     end
 })
 
--- Обработка нажатия клавиши (только если кейбинд задан)
-game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if currentKeybind == "" then return end -- если клавиша не задана — игнорируем
-    if input.KeyCode then
-        local keyName = input.KeyCode.Name
-        if keyName == currentKeybind then
-            ToggleAimbot()
-        end
-    end
-end)
+MainTab.toggles = { AimbotToggle = aimbotToggle }
 
 MainTab:CreateSection({ name = "Настройки" })
 
@@ -595,7 +615,6 @@ MainTab:CreateSlider({
     increment = 1,
     suffix = " px",
     current = settings.fov,
-    flag = "FOVSlider_Main",
     callback = function(v)
         settings.fov = v
         saveSettings(settings)
@@ -609,7 +628,6 @@ MainTab:CreateSlider({
     increment = 10,
     suffix = " studs",
     current = settings.maxDistance,
-    flag = "MaxDistance_Main",
     callback = function(v)
         settings.maxDistance = v
         saveSettings(settings)
@@ -620,7 +638,6 @@ MainTab:CreateDropdown({
     name = "Часть тела",
     options = {"Head", "HumanoidRootPart", "Torso"},
     current = settings.aimPart,
-    flag = "AimPart_Main",
     callback = function(v)
         settings.aimPart = v
         saveSettings(settings)
@@ -630,7 +647,6 @@ MainTab:CreateDropdown({
 MainTab:CreateToggle({
     name = "Проверка стен",
     current = settings.visibleCheck,
-    flag = "VisibleCheck_Main",
     callback = function(v)
         settings.visibleCheck = v
         saveSettings(settings)
@@ -640,7 +656,6 @@ MainTab:CreateToggle({
 MainTab:CreateToggle({
     name = "Игнорировать союзников",
     current = settings.ignoreTeam,
-    flag = "IgnoreTeam_Main",
     callback = function(v)
         settings.ignoreTeam = v
         saveSettings(settings)
@@ -653,41 +668,9 @@ MainTab:CreateSlider({
     increment = 0.01,
     suffix = "",
     current = settings.resistance,
-    flag = "Resistance_Main",
     callback = function(v)
         settings.resistance = v
         saveSettings(settings)
-    end
-})
-
-MainTab:CreateSection({ name = "Управление" })
-
-MainTab:CreateButton({
-    name = "Найти цель",
-    callback = function()
-        if aimbotEnabled then
-            findTarget()
-            Notify("Ryzen System", lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет", 2)
-        else
-            Notify("Ryzen System", "Сначала включите аимбот!", 2)
-        end
-    end
-})
-
-MainTab:CreateButton({
-    name = "Сбросить настройки",
-    callback = function()
-        settings.fov = 20
-        settings.maxDistance = 50
-        settings.aimPart = "Head"
-        settings.visibleCheck = true
-        settings.ignoreTeam = false
-        settings.resistance = 0.85
-        settings.aimbotKeybind = ""
-        currentKeybind = ""
-        saveSettings(settings)
-        UpdateFOVCircle(20)
-        Notify("Ryzen System", "Настройки сброшены", 2)
     end
 })
 
@@ -699,7 +682,6 @@ VisualsTab:CreateSection({ name = "Настройки" })
 VisualsTab:CreateToggle({
     name = "ESP",
     current = settings.espEnabled,
-    flag = "ESP_Visuals",
     callback = function(v)
         settings.espEnabled = v
         _G.ESP.Enabled = v
@@ -711,7 +693,6 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Name",
     current = settings.showName,
-    flag = "ShowName_Visuals",
     callback = function(v)
         settings.showName = v
         _G.ESP.ShowName = v
@@ -722,7 +703,6 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Distance",
     current = settings.showDistance,
-    flag = "ShowDistance_Visuals",
     callback = function(v)
         settings.showDistance = v
         _G.ESP.ShowDistance = v
@@ -733,7 +713,6 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Team",
     current = settings.showTeam,
-    flag = "ShowTeam_Visuals",
     callback = function(v)
         settings.showTeam = v
         _G.ESP.ShowTeam = v
@@ -744,7 +723,6 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Highlight",
     current = settings.showHighlight,
-    flag = "ShowHighlight_Visuals",
     callback = function(v)
         settings.showHighlight = v
         _G.ESP.ShowHighlight = v
@@ -755,7 +733,6 @@ VisualsTab:CreateToggle({
 VisualsTab:CreateToggle({
     name = "Look Direction",
     current = settings.showLookDirection,
-    flag = "ShowLookDirection_Visuals",
     callback = function(v)
         settings.showLookDirection = v
         _G.ESP.ShowLookDirection = v
@@ -796,4 +773,12 @@ player.CharacterAdded:Connect(function()
     DestroyFOVCircle()
 end)
 
-Notify("Ryzen System", "Аимбот + Keybind загружены", 3)
+-- Поиск кнопки Grab через 2 секунды
+task.wait(2)
+FindAndBindGrabButton()
+
+Rayfield:Notify({
+    Title = "Ryzen System",
+    Content = "Аимбот + Grab загружены",
+    Duration = 3
+})
