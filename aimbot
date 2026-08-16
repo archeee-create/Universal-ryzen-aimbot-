@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Grab (выключение при захвате)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + Кнопка AIM + Grab (выключение)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -65,9 +65,116 @@ local aimbotEnabled = false
 local lockedTarget = nil
 local settings = loadSettings()
 
--- ============================================
--- FOV КРУГ
--- ============================================
+-- ============================================================
+-- ===== ПЛАВАЮЩАЯ КНОПКА AIM =====
+-- ============================================================
+local aimButton = nil
+local aimLabel = nil
+local floatingGui = nil
+
+local function UpdateAimButton()
+    if aimButton then
+        if aimbotEnabled then
+            aimButton.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+            aimLabel.Text = "AIM ON"
+        else
+            aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            aimLabel.Text = "AIM OFF"
+        end
+    end
+end
+
+local function ToggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    UpdateAimButton()
+    
+    if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
+        MainTab.toggles.AimbotToggle:Set(aimbotEnabled)
+    end
+    
+    if aimbotEnabled then
+        CreateFOVCircle()
+        findTarget()
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВКЛЮЧЕН",
+            Duration = 1.5
+        })
+    else
+        DestroyFOVCircle()
+        lockedTarget = nil
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВЫКЛЮЧЕН",
+            Duration = 1.5
+        })
+    end
+end
+
+local function CreateFloatingButton()
+    if floatingGui then return end
+
+    floatingGui = Instance.new("ScreenGui")
+    floatingGui.Name = "AimbotButton"
+    floatingGui.ResetOnSpawn = false
+    floatingGui.Parent = player.PlayerGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 120, 0, 120)
+    frame.Position = UDim2.new(0, 20, 0, 100)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    frame.BackgroundTransparency = 0.05
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.ZIndex = 100
+    frame.Parent = floatingGui
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 12)
+    frameCorner.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 20)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "AIMBOT"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamBold
+    title.ZIndex = 101
+    title.Parent = frame
+
+    aimButton = Instance.new("TextButton")
+    aimButton.Size = UDim2.new(0, 80, 0, 50)
+    aimButton.Position = UDim2.new(0.5, -40, 0.5, -15)
+    aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    aimButton.BackgroundTransparency = 0.2
+    aimButton.BorderSizePixel = 2
+    aimButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    aimButton.ZIndex = 102
+    aimButton.Parent = frame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = aimButton
+
+    aimLabel = Instance.new("TextLabel")
+    aimLabel.Size = UDim2.new(1, 0, 1, 0)
+    aimLabel.BackgroundTransparency = 1
+    aimLabel.Text = "AIM OFF"
+    aimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    aimLabel.TextSize = 14
+    aimLabel.Font = Enum.Font.GothamBold
+    aimLabel.ZIndex = 103
+    aimLabel.Parent = aimButton
+
+    aimButton.MouseButton1Click:Connect(ToggleAimbot)
+    UpdateAimButton()
+end
+
+-- ============================================================
+-- ===== FOV КРУГ =====
+-- ============================================================
 local fovSize = settings.fov
 local fovCircle = nil
 local circleFrame = nil
@@ -131,7 +238,7 @@ local function UpdateFOVCircle(newSize)
 end
 
 -- ============================================================
--- ===== ESP (_G.ESP) =====
+-- ===== ESP =====
 -- ============================================================
 _G.ESP = {
     Enabled = false,
@@ -518,13 +625,13 @@ local function findTarget()
 end
 
 -- ============================================================
--- ===== ПОИСК КНОПКИ "GRAB" (ВЫКЛЮЧАЕТ АИМБОТ) =====
+-- ===== ПОИСК GRAB (ВЫКЛЮЧАЕТ АИМБОТ) =====
 -- ============================================================
 local function FindAndBindGrabButton()
     local playerGui = player.PlayerGui
     local grabButton = nil
     
-    -- Ищем по тексту Grab/Capture/Захват
+    -- 1. Ищем по тексту
     for _, gui in ipairs(playerGui:GetDescendants()) do
         if gui:IsA("TextButton") or gui:IsA("ImageButton") then
             local text = gui.Text and gui.Text:lower() or ""
@@ -537,7 +644,7 @@ local function FindAndBindGrabButton()
         end
     end
     
-    -- Если не нашли — ищем по позиции (над прыжком)
+    -- 2. Если не нашли — ищем по позиции (над прыжком)
     if not grabButton then
         local jumpButton = nil
         for _, gui in ipairs(playerGui:GetDescendants()) do
@@ -573,15 +680,16 @@ local function FindAndBindGrabButton()
                 aimbotEnabled = false
                 DestroyFOVCircle()
                 lockedTarget = nil
+                UpdateAimButton()
                 if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
                     MainTab.toggles.AimbotToggle:Set(false)
                 end
-                print("[Aimbot] Выключен при нажатии на Grab")
+                print("[Aimbot] Выключен при Grab")
             end
         end)
-        print("[Aimbot] Кнопка Grab привязана")
+        print("[Aimbot] Grab привязан")
     else
-        print("[Aimbot] Кнопка Grab не найдена")
+        print("[Aimbot] Grab не найден")
     end
 end
 
@@ -602,6 +710,7 @@ local aimbotToggle = MainTab:CreateToggle({
             DestroyFOVCircle()
             lockedTarget = nil
         end
+        UpdateAimButton()
     end
 })
 
@@ -743,6 +852,10 @@ VisualsTab:CreateToggle({
 -- ============================================================
 -- ===== ЗАПУСК =====
 -- ============================================================
+CreateFloatingButton()
+task.wait(2)
+FindAndBindGrabButton()
+
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
     if not lockedTarget or not lockedTarget.Character then
@@ -771,14 +884,11 @@ player.CharacterAdded:Connect(function()
     aimbotEnabled = false
     lockedTarget = nil
     DestroyFOVCircle()
+    UpdateAimButton()
 end)
-
--- Поиск кнопки Grab через 2 секунды
-task.wait(2)
-FindAndBindGrabButton()
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Grab загружены",
+    Content = "Аимбот + AIM + Grab загружены",
     Duration = 3
 })
