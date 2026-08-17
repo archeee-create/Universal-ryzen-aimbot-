@@ -1,0 +1,482 @@
+-- TAS для планшета (Delta) — ВСЕ КНОПКИ + ПОДРОБНЫЙ СТАТУС
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+-- ============================================================
+-- ===== КОНСТАНТЫ =====
+-- ============================================================
+local MAX_SLOTS = 6
+local TAS_PATH = "storage/emulated/0/Delta/workspace/tas/"
+local RECORDING_FILE = TAS_PATH .. "recording_"
+
+-- ============================================================
+-- ===== ИНИЦИАЛИЗАЦИЯ =====
+-- ============================================================
+if not isfolder(TAS_PATH) then
+    makefolder(TAS_PATH)
+end
+
+-- ============================================================
+-- ===== TAS =====
+-- ============================================================
+local isRecording = false
+local isPlaying = false
+local recordingData = {}
+local playbackConnection = nil
+local recordConnection = nil
+local selectedSlot = 1
+local playbackSpeed = 1
+local frameCount = 0
+
+local function GetRoot()
+    local char = LocalPlayer.Character
+    if char then
+        return char:FindFirstChild("HumanoidRootPart")
+    end
+    return nil
+end
+
+local function UpdateStatus(text, color)
+    if statusText then
+        statusText.Text = text
+        statusText.TextColor3 = color
+        print("[TAS] " .. text) -- Лог в консоль
+    end
+end
+
+local function StartRecording()
+    if isRecording then 
+        UpdateStatus("⏳ УЖЕ ЗАПИСЬ", Color3.fromRGB(255, 255, 0))
+        return 
+    end
+    
+    local root = GetRoot()
+    if not root then 
+        UpdateStatus("❌ НЕТ ПЕРСОНАЖА", Color3.fromRGB(255, 0, 0))
+        return 
+    end
+    
+    isRecording = true
+    recordingData = {}
+    frameCount = 0
+    local startTime = tick()
+    
+    UpdateStatus("🔴 ЗАПИСЬ... (0 кадров)", Color3.fromRGB(255, 0, 0))
+    
+    recordConnection = RunService.Heartbeat:Connect(function()
+        if not isRecording then 
+            recordConnection:Disconnect()
+            recordConnection = nil
+            return 
+        end
+        
+        local root = GetRoot()
+        if not root then return end
+        
+        local pos = root.Position
+        local angle = root.Orientation.Y
+        local currentTime = tick() - startTime
+        
+        table.insert(recordingData, {
+            time = currentTime,
+            x = pos.X,
+            y = pos.Y,
+            z = pos.Z,
+            angle = angle
+        })
+        
+        frameCount = frameCount + 1
+        if frameCount % 10 == 0 then
+            UpdateStatus("🔴 ЗАПИСЬ... (" .. frameCount .. " кадров)", Color3.fromRGB(255, 0, 0))
+        end
+    end)
+end
+
+local function StopRecording()
+    if not isRecording then 
+        UpdateStatus("⚠️ ЗАПИСЬ НЕ АКТИВНА", Color3.fromRGB(255, 255, 0))
+        return 
+    end
+    
+    isRecording = false
+    
+    if recordConnection then
+        recordConnection:Disconnect()
+        recordConnection = nil
+    end
+    
+    if #recordingData == 0 then 
+        UpdateStatus("❌ НЕТ ДАННЫХ", Color3.fromRGB(255, 0, 0))
+        return 
+    end
+    
+    local filePath = RECORDING_FILE .. selectedSlot .. ".txt"
+    local content = ""
+    for _, data in ipairs(recordingData) do
+        content = content .. string.format("%.3f %.3f %.3f %.3f %.3f\n", 
+            data.time, data.x, data.y, data.z, data.angle)
+    end
+    writefile(filePath, content)
+    recordingData = {}
+    
+    UpdateStatus("✅ СОХРАНЕНО (" .. frameCount .. " кадров, слот " .. selectedSlot .. ")", Color3.fromRGB(0, 255, 0))
+    frameCount = 0
+end
+
+local function PlayRecording()
+    if isPlaying then 
+        UpdateStatus("⏳ УЖЕ ВОСПР.", Color3.fromRGB(255, 255, 0))
+        return 
+    end
+    
+    local filePath = RECORDING_FILE .. selectedSlot .. ".txt"
+    if not isfile(filePath) then 
+        UpdateStatus("❌ СЛОТ " .. selectedSlot .. " ПУСТ", Color3.fromRGB(255, 0, 0))
+        return 
+    end
+    
+    local content = readfile(filePath)
+    local frames = {}
+    for line in content:gmatch("[^\n]+") do
+        local time, x, y, z, angle = line:match("([%d.]+)%s+([%d.]+)%s+([%d.]+)%s+([%d.]+)%s+([%d.]+)")
+        if time and x and y and z and angle then
+            table.insert(frames, {
+                time = tonumber(time),
+                x = tonumber(x),
+                y = tonumber(y),
+                z = tonumber(z),
+                angle = tonumber(angle)
+            })
+        end
+    end
+    
+    if #frames == 0 then 
+        UpdateStatus("❌ ФАЙЛ ПОВРЕЖДЁН", Color3.fromRGB(255, 0, 0))
+        return 
+    end
+    
+    isPlaying = true
+    local startTime = tick()
+    local currentFrame = 1
+    
+    UpdateStatus("▶️ ВОСПР. (" .. #frames .. " кадров, " .. playbackSpeed .. "x)", Color3.fromRGB(0, 255, 255))
+    
+    playbackConnection = RunService.Heartbeat:Connect(function()
+        if not isPlaying then
+            playbackConnection:Disconnect()
+            playbackConnection = nil
+            return
+        end
+        
+        local elapsed = (tick() - startTime) * playbackSpeed
+        
+        while currentFrame <= #frames and frames[currentFrame].time <= elapsed do
+            local frame = frames[currentFrame]
+            local root = GetRoot()
+            if root then
+                root.CFrame = CFrame.new(frame.x, frame.y, frame.z) * CFrame.Angles(0, math.rad(frame.angle), 0)
+            end
+            currentFrame = currentFrame + 1
+        end
+        
+        if currentFrame > #frames then
+            isPlaying = false
+            if playbackConnection then
+                playbackConnection:Disconnect()
+                playbackConnection = nil
+            end
+            UpdateStatus("✅ ВОСПР. ЗАВЕРШЕНО (" .. #frames .. " кадров)", Color3.fromRGB(0, 255, 0))
+        end
+    end)
+end
+
+local function StopPlayback()
+    if isPlaying then
+        isPlaying = false
+        if playbackConnection then
+            playbackConnection:Disconnect()
+            playbackConnection = nil
+        end
+        UpdateStatus("⏹ ОСТАНОВЛЕНО", Color3.fromRGB(255, 255, 0))
+    else
+        UpdateStatus("⚠️ НЕТ ВОСПР.", Color3.fromRGB(255, 255, 0))
+    end
+end
+
+local function DeleteRecording()
+    local filePath = RECORDING_FILE .. selectedSlot .. ".txt"
+    if isfile(filePath) then
+        delfile(filePath)
+        UpdateStatus("🗑 УДАЛЕНО (слот " .. selectedSlot .. ")", Color3.fromRGB(255, 100, 0))
+    else
+        UpdateStatus("❌ СЛОТ " .. selectedSlot .. " ПУСТ", Color3.fromRGB(255, 0, 0))
+    end
+end
+
+-- ============================================================
+-- ===== ГЛАВНОЕ МЕНЮ =====
+-- ============================================================
+local controlGui = nil
+local statusText = nil
+
+local function CreateMainMenu()
+    if controlGui then return end
+    
+    controlGui = Instance.new("ScreenGui")
+    controlGui.Name = "TASControl"
+    controlGui.ResetOnSpawn = false
+    controlGui.Parent = LocalPlayer.PlayerGui
+    
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 350, 0, 520)
+    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -260)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+    mainFrame.BackgroundTransparency = 0.1
+    mainFrame.BorderSizePixel = 2
+    mainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    mainFrame.Parent = controlGui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = mainFrame
+    
+    -- Заголовок
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "🎬 TAS Control"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 20
+    title.Font = Enum.Font.GothamBold
+    title.Parent = mainFrame
+    
+    -- Статус (РАСШИРЕННЫЙ)
+    statusText = Instance.new("TextLabel")
+    statusText.Size = UDim2.new(1, -20, 0, 45)
+    statusText.Position = UDim2.new(0, 10, 0, 45)
+    statusText.BackgroundTransparency = 0.5
+    statusText.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    statusText.Text = "✅ ГОТОВ"
+    statusText.TextColor3 = Color3.fromRGB(0, 255, 0)
+    statusText.TextSize = 14
+    statusText.Font = Enum.Font.GothamBold
+    statusText.Parent = mainFrame
+    statusText.TextWrapped = true
+    statusText.TextScaled = false
+    
+    local indCorner = Instance.new("UICorner")
+    indCorner.CornerRadius = UDim.new(0, 6)
+    indCorner.Parent = statusText
+    
+    -- ===== ВСЕ КНОПКИ =====
+    local btnY = 100
+    
+    -- 1. ЗАПИСЬ
+    local btn1 = Instance.new("TextButton")
+    btn1.Size = UDim2.new(0, 300, 0, 40)
+    btn1.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn1.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    btn1.BackgroundTransparency = 0.2
+    btn1.BorderSizePixel = 3
+    btn1.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    btn1.Text = "🔴 ЗАПИСЬ"
+    btn1.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn1.TextSize = 16
+    btn1.Font = Enum.Font.GothamBold
+    btn1.Parent = mainFrame
+    local c1 = Instance.new("UICorner")
+    c1.CornerRadius = UDim.new(0, 10)
+    c1.Parent = btn1
+    btn1.TouchTap:Connect(StartRecording)
+    btn1.TouchEnd:Connect(StartRecording)
+    btnY = btnY + 48
+    
+    -- 2. СТОП ЗАПИСЬ
+    local btn2 = Instance.new("TextButton")
+    btn2.Size = UDim2.new(0, 300, 0, 40)
+    btn2.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn2.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+    btn2.BackgroundTransparency = 0.2
+    btn2.BorderSizePixel = 3
+    btn2.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    btn2.Text = "⏹ СТОП ЗАПИСЬ"
+    btn2.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn2.TextSize = 16
+    btn2.Font = Enum.Font.GothamBold
+    btn2.Parent = mainFrame
+    local c2 = Instance.new("UICorner")
+    c2.CornerRadius = UDim.new(0, 10)
+    c2.Parent = btn2
+    btn2.TouchTap:Connect(StopRecording)
+    btn2.TouchEnd:Connect(StopRecording)
+    btnY = btnY + 48
+    
+    -- 3. ВОСПРОИЗВЕСТИ
+    local btn3 = Instance.new("TextButton")
+    btn3.Size = UDim2.new(0, 300, 0, 40)
+    btn3.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn3.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    btn3.BackgroundTransparency = 0.2
+    btn3.BorderSizePixel = 3
+    btn3.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    btn3.Text = "▶️ ВОСПРОИЗВЕСТИ"
+    btn3.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn3.TextSize = 16
+    btn3.Font = Enum.Font.GothamBold
+    btn3.Parent = mainFrame
+    local c3 = Instance.new("UICorner")
+    c3.CornerRadius = UDim.new(0, 10)
+    c3.Parent = btn3
+    btn3.TouchTap:Connect(PlayRecording)
+    btn3.TouchEnd:Connect(PlayRecording)
+    btnY = btnY + 48
+    
+    -- 4. СТОП ВОСПР.
+    local btn4 = Instance.new("TextButton")
+    btn4.Size = UDim2.new(0, 300, 0, 40)
+    btn4.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn4.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    btn4.BackgroundTransparency = 0.2
+    btn4.BorderSizePixel = 3
+    btn4.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    btn4.Text = "⏹ СТОП ВОСПР."
+    btn4.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn4.TextSize = 16
+    btn4.Font = Enum.Font.GothamBold
+    btn4.Parent = mainFrame
+    local c4 = Instance.new("UICorner")
+    c4.CornerRadius = UDim.new(0, 10)
+    c4.Parent = btn4
+    btn4.TouchTap:Connect(StopPlayback)
+    btn4.TouchEnd:Connect(StopPlayback)
+    btnY = btnY + 48
+    
+    -- 5. УДАЛИТЬ
+    local btn5 = Instance.new("TextButton")
+    btn5.Size = UDim2.new(0, 300, 0, 40)
+    btn5.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn5.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+    btn5.BackgroundTransparency = 0.2
+    btn5.BorderSizePixel = 3
+    btn5.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    btn5.Text = "🗑 УДАЛИТЬ ЗАПИСЬ"
+    btn5.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn5.TextSize = 16
+    btn5.Font = Enum.Font.GothamBold
+    btn5.Parent = mainFrame
+    local c5 = Instance.new("UICorner")
+    c5.CornerRadius = UDim.new(0, 10)
+    c5.Parent = btn5
+    btn5.TouchTap:Connect(DeleteRecording)
+    btn5.TouchEnd:Connect(DeleteRecording)
+    btnY = btnY + 48
+    
+    -- ===== ВЫБОР СЛОТА =====
+    local slotFrame = Instance.new("Frame")
+    slotFrame.Size = UDim2.new(1, -20, 0, 32)
+    slotFrame.Position = UDim2.new(0, 10, 0, btnY + 4)
+    slotFrame.BackgroundTransparency = 0.3
+    slotFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    slotFrame.Parent = mainFrame
+    
+    local slotCorner = Instance.new("UICorner")
+    slotCorner.CornerRadius = UDim.new(0, 6)
+    slotCorner.Parent = slotFrame
+    
+    local slotLabel = Instance.new("TextLabel")
+    slotLabel.Size = UDim2.new(0, 45, 1, 0)
+    slotLabel.Position = UDim2.new(0, 5, 0, 0)
+    slotLabel.BackgroundTransparency = 1
+    slotLabel.Text = "Слот:"
+    slotLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    slotLabel.TextSize = 14
+    slotLabel.Font = Enum.Font.GothamBold
+    slotLabel.Parent = slotFrame
+    
+    for i = 1, MAX_SLOTS do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 33, 1, 0)
+        btn.Position = UDim2.new(0, 50 + (i-1) * 38, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        btn.BackgroundTransparency = 0.3
+        btn.BorderSizePixel = 2
+        btn.BorderColor3 = Color3.fromRGB(200, 200, 200)
+        btn.Text = tostring(i)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextSize = 14
+        btn.Font = Enum.Font.GothamBold
+        btn.Parent = slotFrame
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 4)
+        btnCorner.Parent = btn
+        
+        btn.TouchTap:Connect(function()
+            selectedSlot = i
+            UpdateStatus("📁 СЛОТ " .. i, Color3.fromRGB(0, 200, 255))
+        end)
+        btn.TouchEnd:Connect(function()
+            selectedSlot = i
+            UpdateStatus("📁 СЛОТ " .. i, Color3.fromRGB(0, 200, 255))
+        end)
+    end
+    
+    -- ===== ВЫБОР СКОРОСТИ =====
+    local speedFrame = Instance.new("Frame")
+    speedFrame.Size = UDim2.new(1, -20, 0, 32)
+    speedFrame.Position = UDim2.new(0, 10, 0, btnY + 40)
+    speedFrame.BackgroundTransparency = 0.3
+    speedFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    speedFrame.Parent = mainFrame
+    
+    local speedCorner = Instance.new("UICorner")
+    speedCorner.CornerRadius = UDim.new(0, 6)
+    speedCorner.Parent = speedFrame
+    
+    local speedLabel = Instance.new("TextLabel")
+    speedLabel.Size = UDim2.new(0, 65, 1, 0)
+    speedLabel.Position = UDim2.new(0, 5, 0, 0)
+    speedLabel.BackgroundTransparency = 1
+    speedLabel.Text = "Скорость:"
+    speedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    speedLabel.TextSize = 14
+    speedLabel.Font = Enum.Font.GothamBold
+    speedLabel.Parent = speedFrame
+    
+    local speedOptions = {0.5, 1, 2, 3, 5}
+    for i, speed in ipairs(speedOptions) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0, 38, 1, 0)
+        btn.Position = UDim2.new(0, 70 + (i-1) * 40, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        btn.BackgroundTransparency = 0.3
+        btn.BorderSizePixel = 2
+        btn.BorderColor3 = Color3.fromRGB(200, 200, 200)
+        btn.Text = tostring(speed) .. "x"
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.TextSize = 14
+        btn.Font = Enum.Font.GothamBold
+        btn.Parent = speedFrame
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 4)
+        btnCorner.Parent = btn
+        
+        btn.TouchTap:Connect(function()
+            playbackSpeed = speed
+            UpdateStatus("⏱ " .. speed .. "x", Color3.fromRGB(0, 255, 150))
+        end)
+        btn.TouchEnd:Connect(function()
+            playbackSpeed = speed
+            UpdateStatus("⏱ " .. speed .. "x", Color3.fromRGB(0, 255, 150))
+        end)
+    end
+end
+
+-- ============================================================
+-- ===== ЗАПУСК =====
+-- ============================================================
+CreateMainMenu()
+UpdateStatus("✅ ГОТОВ", Color3.fromRGB(0, 255, 0))
