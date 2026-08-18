@@ -1,4 +1,4 @@
--- TAS для планшета (Delta) — ВСЕ КНОПКИ + ПОДРОБНЫЙ СТАТУС
+-- TAS для планшета (Delta) — ВСЕ 5 КНОПОК + СТАТУС (БЕЗ СКОРОСТИ)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
@@ -26,7 +26,6 @@ local recordingData = {}
 local playbackConnection = nil
 local recordConnection = nil
 local selectedSlot = 1
-local playbackSpeed = 1
 local frameCount = 0
 
 local function GetRoot()
@@ -41,10 +40,11 @@ local function UpdateStatus(text, color)
     if statusText then
         statusText.Text = text
         statusText.TextColor3 = color
-        print("[TAS] " .. text) -- Лог в консоль
+        print("[TAS] " .. text)
     end
 end
 
+-- ===== КНОПКА 1: ЗАПИСЬ =====
 local function StartRecording()
     if isRecording then 
         UpdateStatus("⏳ УЖЕ ЗАПИСЬ", Color3.fromRGB(255, 255, 0))
@@ -93,6 +93,7 @@ local function StartRecording()
     end)
 end
 
+-- ===== КНОПКА 2: СТОП ЗАПИСЬ =====
 local function StopRecording()
     if not isRecording then 
         UpdateStatus("⚠️ ЗАПИСЬ НЕ АКТИВНА", Color3.fromRGB(255, 255, 0))
@@ -124,6 +125,7 @@ local function StopRecording()
     frameCount = 0
 end
 
+-- ===== КНОПКА 3: ВОСПРОИЗВЕСТИ =====
 local function PlayRecording()
     if isPlaying then 
         UpdateStatus("⏳ УЖЕ ВОСПР.", Color3.fromRGB(255, 255, 0))
@@ -160,7 +162,7 @@ local function PlayRecording()
     local startTime = tick()
     local currentFrame = 1
     
-    UpdateStatus("▶️ ВОСПР. (" .. #frames .. " кадров, " .. playbackSpeed .. "x)", Color3.fromRGB(0, 255, 255))
+    UpdateStatus("▶️ ВОСПР. (" .. #frames .. " кадров)", Color3.fromRGB(0, 255, 255))
     
     playbackConnection = RunService.Heartbeat:Connect(function()
         if not isPlaying then
@@ -169,7 +171,7 @@ local function PlayRecording()
             return
         end
         
-        local elapsed = (tick() - startTime) * playbackSpeed
+        local elapsed = tick() - startTime
         
         while currentFrame <= #frames and frames[currentFrame].time <= elapsed do
             local frame = frames[currentFrame]
@@ -191,6 +193,7 @@ local function PlayRecording()
     end)
 end
 
+-- ===== КНОПКА 4: СТОП ВОСПР. =====
 local function StopPlayback()
     if isPlaying then
         isPlaying = false
@@ -204,6 +207,7 @@ local function StopPlayback()
     end
 end
 
+-- ===== КНОПКА 5: УДАЛИТЬ =====
 local function DeleteRecording()
     local filePath = RECORDING_FILE .. selectedSlot .. ".txt"
     if isfile(filePath) then
@@ -229,8 +233,8 @@ local function CreateMainMenu()
     controlGui.Parent = LocalPlayer.PlayerGui
     
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 350, 0, 520)
-    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -260)
+    mainFrame.Size = UDim2.new(0, 350, 0, 480)
+    mainFrame.Position = UDim2.new(0.5, -175, 0.5, -240)
     mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
     mainFrame.BackgroundTransparency = 0.1
     mainFrame.BorderSizePixel = 2
@@ -252,7 +256,7 @@ local function CreateMainMenu()
     title.Font = Enum.Font.GothamBold
     title.Parent = mainFrame
     
-    -- Статус (РАСШИРЕННЫЙ)
+    -- Статус
     statusText = Instance.new("TextLabel")
     statusText.Size = UDim2.new(1, -20, 0, 45)
     statusText.Position = UDim2.new(0, 10, 0, 45)
@@ -264,19 +268,20 @@ local function CreateMainMenu()
     statusText.Font = Enum.Font.GothamBold
     statusText.Parent = mainFrame
     statusText.TextWrapped = true
-    statusText.TextScaled = false
     
     local indCorner = Instance.new("UICorner")
     indCorner.CornerRadius = UDim.new(0, 6)
     indCorner.Parent = statusText
     
-    -- ===== ВСЕ КНОПКИ =====
+    -- ===== ВСЕ 5 КНОПОК =====
     local btnY = 100
+    local btnH = 40
+    local gap = 6
     
     -- 1. ЗАПИСЬ
     local btn1 = Instance.new("TextButton")
-    btn1.Size = UDim2.new(0, 300, 0, 40)
-    btn1.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn1.Size = UDim2.new(0, 310, 0, btnH)
+    btn1.Position = UDim2.new(0.5, -155, 0, btnY)
     btn1.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     btn1.BackgroundTransparency = 0.2
     btn1.BorderSizePixel = 3
@@ -291,12 +296,12 @@ local function CreateMainMenu()
     c1.Parent = btn1
     btn1.TouchTap:Connect(StartRecording)
     btn1.TouchEnd:Connect(StartRecording)
-    btnY = btnY + 48
+    btnY = btnY + btnH + gap
     
     -- 2. СТОП ЗАПИСЬ
     local btn2 = Instance.new("TextButton")
-    btn2.Size = UDim2.new(0, 300, 0, 40)
-    btn2.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn2.Size = UDim2.new(0, 310, 0, btnH)
+    btn2.Position = UDim2.new(0.5, -155, 0, btnY)
     btn2.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
     btn2.BackgroundTransparency = 0.2
     btn2.BorderSizePixel = 3
@@ -311,12 +316,12 @@ local function CreateMainMenu()
     c2.Parent = btn2
     btn2.TouchTap:Connect(StopRecording)
     btn2.TouchEnd:Connect(StopRecording)
-    btnY = btnY + 48
+    btnY = btnY + btnH + gap
     
     -- 3. ВОСПРОИЗВЕСТИ
     local btn3 = Instance.new("TextButton")
-    btn3.Size = UDim2.new(0, 300, 0, 40)
-    btn3.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn3.Size = UDim2.new(0, 310, 0, btnH)
+    btn3.Position = UDim2.new(0.5, -155, 0, btnY)
     btn3.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
     btn3.BackgroundTransparency = 0.2
     btn3.BorderSizePixel = 3
@@ -331,12 +336,12 @@ local function CreateMainMenu()
     c3.Parent = btn3
     btn3.TouchTap:Connect(PlayRecording)
     btn3.TouchEnd:Connect(PlayRecording)
-    btnY = btnY + 48
+    btnY = btnY + btnH + gap
     
     -- 4. СТОП ВОСПР.
     local btn4 = Instance.new("TextButton")
-    btn4.Size = UDim2.new(0, 300, 0, 40)
-    btn4.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn4.Size = UDim2.new(0, 310, 0, btnH)
+    btn4.Position = UDim2.new(0.5, -155, 0, btnY)
     btn4.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     btn4.BackgroundTransparency = 0.2
     btn4.BorderSizePixel = 3
@@ -351,12 +356,12 @@ local function CreateMainMenu()
     c4.Parent = btn4
     btn4.TouchTap:Connect(StopPlayback)
     btn4.TouchEnd:Connect(StopPlayback)
-    btnY = btnY + 48
+    btnY = btnY + btnH + gap
     
     -- 5. УДАЛИТЬ
     local btn5 = Instance.new("TextButton")
-    btn5.Size = UDim2.new(0, 300, 0, 40)
-    btn5.Position = UDim2.new(0.5, -150, 0, btnY)
+    btn5.Size = UDim2.new(0, 310, 0, btnH)
+    btn5.Position = UDim2.new(0.5, -155, 0, btnY)
     btn5.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
     btn5.BackgroundTransparency = 0.2
     btn5.BorderSizePixel = 3
@@ -371,12 +376,12 @@ local function CreateMainMenu()
     c5.Parent = btn5
     btn5.TouchTap:Connect(DeleteRecording)
     btn5.TouchEnd:Connect(DeleteRecording)
-    btnY = btnY + 48
+    btnY = btnY + btnH + gap
     
     -- ===== ВЫБОР СЛОТА =====
     local slotFrame = Instance.new("Frame")
-    slotFrame.Size = UDim2.new(1, -20, 0, 32)
-    slotFrame.Position = UDim2.new(0, 10, 0, btnY + 4)
+    slotFrame.Size = UDim2.new(1, -20, 0, 35)
+    slotFrame.Position = UDim2.new(0, 10, 0, btnY + 5)
     slotFrame.BackgroundTransparency = 0.3
     slotFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
     slotFrame.Parent = mainFrame
@@ -397,8 +402,8 @@ local function CreateMainMenu()
     
     for i = 1, MAX_SLOTS do
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 33, 1, 0)
-        btn.Position = UDim2.new(0, 50 + (i-1) * 38, 0, 0)
+        btn.Size = UDim2.new(0, 35, 1, 0)
+        btn.Position = UDim2.new(0, 50 + (i-1) * 40, 0, 0)
         btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
         btn.BackgroundTransparency = 0.3
         btn.BorderSizePixel = 2
@@ -420,57 +425,6 @@ local function CreateMainMenu()
         btn.TouchEnd:Connect(function()
             selectedSlot = i
             UpdateStatus("📁 СЛОТ " .. i, Color3.fromRGB(0, 200, 255))
-        end)
-    end
-    
-    -- ===== ВЫБОР СКОРОСТИ =====
-    local speedFrame = Instance.new("Frame")
-    speedFrame.Size = UDim2.new(1, -20, 0, 32)
-    speedFrame.Position = UDim2.new(0, 10, 0, btnY + 40)
-    speedFrame.BackgroundTransparency = 0.3
-    speedFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    speedFrame.Parent = mainFrame
-    
-    local speedCorner = Instance.new("UICorner")
-    speedCorner.CornerRadius = UDim.new(0, 6)
-    speedCorner.Parent = speedFrame
-    
-    local speedLabel = Instance.new("TextLabel")
-    speedLabel.Size = UDim2.new(0, 65, 1, 0)
-    speedLabel.Position = UDim2.new(0, 5, 0, 0)
-    speedLabel.BackgroundTransparency = 1
-    speedLabel.Text = "Скорость:"
-    speedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    speedLabel.TextSize = 14
-    speedLabel.Font = Enum.Font.GothamBold
-    speedLabel.Parent = speedFrame
-    
-    local speedOptions = {0.5, 1, 2, 3, 5}
-    for i, speed in ipairs(speedOptions) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 38, 1, 0)
-        btn.Position = UDim2.new(0, 70 + (i-1) * 40, 0, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-        btn.BackgroundTransparency = 0.3
-        btn.BorderSizePixel = 2
-        btn.BorderColor3 = Color3.fromRGB(200, 200, 200)
-        btn.Text = tostring(speed) .. "x"
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.TextSize = 14
-        btn.Font = Enum.Font.GothamBold
-        btn.Parent = speedFrame
-        
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 4)
-        btnCorner.Parent = btn
-        
-        btn.TouchTap:Connect(function()
-            playbackSpeed = speed
-            UpdateStatus("⏱ " .. speed .. "x", Color3.fromRGB(0, 255, 150))
-        end)
-        btn.TouchEnd:Connect(function()
-            playbackSpeed = speed
-            UpdateStatus("⏱ " .. speed .. "x", Color3.fromRGB(0, 255, 150))
         end)
     end
 end
