@@ -1,4 +1,4 @@
--- Ryzen Aimbot v18.0 [Rayfield Gen2] + Вайтлист (Dropdown) + Открепление по дистанции
+-- Ryzen Aimbot v18.1 [Rayfield Gen2] + Вайтлист (Мульти-дропдаун)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -572,7 +572,7 @@ local function getTargetClosestToCenter()
     for _, v in ipairs(game.Players:GetPlayers()) do
         if v == player or not v.Character then continue end
         if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
-        if isWhitelisted(v) then continue end  -- <-- Вайтлист
+        if isWhitelisted(v) then continue end
 
         local hum = v.Character:FindFirstChild("Humanoid")
         if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then continue end
@@ -616,7 +616,7 @@ local function lockTarget(target)
     end
     if not part then return end
     
-    -- Проверка дистанции (открепление)
+    -- Открепление по дистанции
     local origin = camera.CFrame.Position
     local dist = (part.Position - origin).magnitude
     if dist > settings.maxDistance then
@@ -801,110 +801,105 @@ VisualsTab:CreateToggle({
 })
 
 -- ============================================================
--- ===== ВАЙТЛИСТ (Dropdown) =====
+-- ===== ВАЙТЛИСТ (МУЛЬТИ-ДРОПДАУН) =====
 -- ============================================================
-local whitelistDropdown = nil
-local selectedWhitelistPlayer = nil
+local selectedWhitelistPlayers = {}
 
 local function updateWhitelistDropdown()
-    if not whitelistDropdown then return end
-    local players = {}
+    local playerNames = {}
     for _, plr in ipairs(game.Players:GetPlayers()) do
         if plr ~= player then
-            table.insert(players, plr.Name)
+            table.insert(playerNames, plr.Name)
         end
     end
-    if #players == 0 then table.insert(players, "Нет игроков") end
-    whitelistDropdown:SetOptions(players)
+    if #playerNames == 0 then
+        table.insert(playerNames, "Нет игроков")
+    end
+    return playerNames
 end
 
 WhitelistTab:CreateSection({ name = "Вайтлист (игнорирование)" })
 
 WhitelistTab:CreateParagraph({
     name = "Информация",
-    text = "Игроки в вайтлисте не будут аимиться. Выбери игрока из списка и нажми кнопку."
+    text = "Выбери игроков из списка (можно несколько). Они не будут аимиться."
 })
 
-whitelistDropdown = WhitelistTab:CreateDropdown({
-    name = "Игроки",
-    options = {"Нет игроков"},
-    current = "Нет игроков",
+local whitelistDropdown = WhitelistTab:CreateDropdown({
+    name = "Выберите игроков",
+    options = updateWhitelistDropdown(),
+    current = {},
+    Multiple = true,
     callback = function(v)
-        selectedWhitelistPlayer = v
+        selectedWhitelistPlayers = v or {}
     end
 })
 
 WhitelistTab:CreateButton({
-    name = "➕ Добавить в вайтлист",
+    name = "➕ Добавить выбранных в вайтлист",
     callback = function()
-        if not selectedWhitelistPlayer or selectedWhitelistPlayer == "Нет игроков" then
+        if not selectedWhitelistPlayers or #selectedWhitelistPlayers == 0 then
             Rayfield:Notify({
                 Title = "Ошибка",
-                Content = "Сначала выбери игрока из списка",
+                Content = "Выбери хотя бы одного игрока",
                 Duration = 2
             })
             return
         end
         
         if not settings.whitelist then settings.whitelist = {} end
-        for _, name in ipairs(settings.whitelist) do
-            if name == selectedWhitelistPlayer then
-                Rayfield:Notify({
-                    Title = "Уже в списке",
-                    Content = selectedWhitelistPlayer .. " уже в вайтлисте",
-                    Duration = 2
-                })
-                return
+        local added = 0
+        for _, name in ipairs(selectedWhitelistPlayers) do
+            local alreadyExists = false
+            for _, existing in ipairs(settings.whitelist) do
+                if existing == name then
+                    alreadyExists = true
+                    break
+                end
+            end
+            if not alreadyExists then
+                table.insert(settings.whitelist, name)
+                added = added + 1
             end
         end
         
-        table.insert(settings.whitelist, selectedWhitelistPlayer)
         saveSettings(settings)
-        
         Rayfield:Notify({
-            Title = "Добавлен",
-            Content = selectedWhitelistPlayer .. " добавлен в вайтлист",
+            Title = "Готово",
+            Content = "Добавлено " .. added .. " игроков в вайтлист",
             Duration = 2
         })
     end
 })
 
 WhitelistTab:CreateButton({
-    name = "➖ Удалить из вайтлиста",
+    name = "➖ Удалить выбранных из вайтлиста",
     callback = function()
-        if not selectedWhitelistPlayer or selectedWhitelistPlayer == "Нет игроков" then
+        if not selectedWhitelistPlayers or #selectedWhitelistPlayers == 0 then
             Rayfield:Notify({
                 Title = "Ошибка",
-                Content = "Сначала выбери игрока из списка",
+                Content = "Выбери игроков для удаления",
                 Duration = 2
             })
             return
         end
         
         if not settings.whitelist then settings.whitelist = {} end
-        local found = false
-        for i, name in ipairs(settings.whitelist) do
-            if name == selectedWhitelistPlayer then
-                table.remove(settings.whitelist, i)
-                found = true
-                break
+        local removed = 0
+        for _, name in ipairs(selectedWhitelistPlayers) do
+            for i, existing in ipairs(settings.whitelist) do
+                if existing == name then
+                    table.remove(settings.whitelist, i)
+                    removed = removed + 1
+                    break
+                end
             end
         end
         
-        if not found then
-            Rayfield:Notify({
-                Title = "Не найден",
-                Content = selectedWhitelistPlayer .. " не в вайтлисте",
-                Duration = 2
-            })
-            return
-        end
-        
         saveSettings(settings)
-        
         Rayfield:Notify({
-            Title = "Удалён",
-            Content = selectedWhitelistPlayer .. " удалён из вайтлиста",
+            Title = "Готово",
+            Content = "Удалено " .. removed .. " игроков из вайтлиста",
             Duration = 2
         })
     end
@@ -934,7 +929,8 @@ WhitelistTab:CreateButton({
 WhitelistTab:CreateButton({
     name = "🔄 Обновить список игроков",
     callback = function()
-        updateWhitelistDropdown()
+        local players = updateWhitelistDropdown()
+        whitelistDropdown:SetOptions(players)
         Rayfield:Notify({
             Title = "Обновлено",
             Content = "Список игроков обновлён",
@@ -943,15 +939,24 @@ WhitelistTab:CreateButton({
     end
 })
 
-game.Players.PlayerAdded:Connect(updateWhitelistDropdown)
-game.Players.PlayerRemoving:Connect(updateWhitelistDropdown)
+game.Players.PlayerAdded:Connect(function()
+    local players = updateWhitelistDropdown()
+    whitelistDropdown:SetOptions(players)
+end)
+
+game.Players.PlayerRemoving:Connect(function()
+    local players = updateWhitelistDropdown()
+    whitelistDropdown:SetOptions(players)
+end)
 
 -- ============================================================
 -- ===== ЗАПУСК =====
 -- ============================================================
 CreateFloatingButton()
 task.wait(2)
-updateWhitelistDropdown()
+
+local players = updateWhitelistDropdown()
+whitelistDropdown:SetOptions(players)
 
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
@@ -986,6 +991,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals + Вайтлист загружены",
+    Content = "Аимбот + Visuals + Вайтлист (мульти-дропдаун) загружены",
     Duration = 3
 })
