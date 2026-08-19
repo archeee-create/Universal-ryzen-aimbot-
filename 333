@@ -1,55 +1,5 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + Белый список + Head/Torso
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + КНОПКА AIM + VISUALS + ИГНОР ДРУЗЕЙ (БЕЗ СОХРАНЕНИЙ)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
-
--- ===== СОХРАНЕНИЕ =====
-local saveFolder = "RyzenAimbot"
-local saveFile = "settings.json"
-local fullPath = saveFolder .. "/" .. saveFile
-
-local function ensureFolder()
-    if not isfolder then return false end
-    if not isfolder(saveFolder) then
-        pcall(function() makefolder(saveFolder) end)
-    end
-    return isfolder(saveFolder)
-end
-
-local function loadSettings()
-    local default = {
-        fov = 20,
-        maxDistance = 50,
-        aimPart = "Head",
-        visibleCheck = true,
-        ignoreTeam = false,
-        resistance = 0.85,
-        espEnabled = false,
-        showDistance = false,
-        showName = false,
-        showTeam = false,
-        showLookDirection = false,
-        showHighlight = false,
-        whitelist = "" -- белый список (имена через запятую)
-    }
-    if not ensureFolder() then return default end
-    if not isfile(fullPath) then return default end
-    local success, data = pcall(function()
-        return game:GetService("HttpService"):JSONDecode(readfile(fullPath))
-    end)
-    if success and type(data) == "table" then
-        for k, v in pairs(default) do
-            if data[k] == nil then data[k] = v end
-        end
-        return data
-    end
-    return default
-end
-
-local function saveSettings(data)
-    if not ensureFolder() then return end
-    pcall(function()
-        writefile(fullPath, game:GetService("HttpService"):JSONEncode(data))
-    end)
-end
 
 -- ===== МЕНЮ =====
 local Window = Rayfield:CreateWindow({
@@ -58,36 +8,135 @@ local Window = Rayfield:CreateWindow({
 })
 
 local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })
 
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
-local settings = loadSettings()
+
+-- ===== НАСТРОЙКИ (БЕЗ СОХРАНЕНИЙ) =====
+local settings = {
+    fov = 20,
+    maxDistance = 50,
+    aimPart = "Head",
+    visibleCheck = true,
+    ignoreTeam = false,
+    ignoreFriends = false,
+    resistance = 0.85,
+    espEnabled = false,
+    showDistance = false,
+    showName = false,
+    showTeam = false,
+    showLookDirection = false,
+    showHighlight = false
+}
 
 -- ============================================================
--- ФУНКЦИЯ БЕЛОГО СПИСКА
+-- ===== ПЛАВАЮЩАЯ КНОПКА AIM =====
 -- ============================================================
-local function isWhitelisted(plr)
-    if settings.whitelist == "" then return false end
-    local names = {}
-    for name in string.gmatch(settings.whitelist, "[^,]+") do
-        local trimmed = name:gsub("^%s*(.-)%s*$", "%1") -- убираем пробелы
-        if trimmed ~= "" then
-            table.insert(names, trimmed:lower())
+local aimButton = nil
+local aimLabel = nil
+local floatingGui = nil
+
+local function UpdateAimButton()
+    if aimButton then
+        if aimbotEnabled then
+            aimButton.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+            aimLabel.Text = "AIM ON"
+        else
+            aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            aimLabel.Text = "AIM OFF"
         end
     end
-    if #names == 0 then return false end
+end
+
+local function ToggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    UpdateAimButton()
     
-    local plrName = plr.Name:lower()
-    local plrDisplayName = plr.DisplayName:lower()
-    
-    for _, name in ipairs(names) do
-        if plrName == name or plrDisplayName == name then
-            return true
-        end
+    if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
+        MainTab.toggles.AimbotToggle:Set(aimbotEnabled)
     end
-    return false
+    
+    if aimbotEnabled then
+        CreateFOVCircle()
+        findTarget()
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВКЛЮЧЕН",
+            Duration = 1.5
+        })
+    else
+        DestroyFOVCircle()
+        lockedTarget = nil
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВЫКЛЮЧЕН",
+            Duration = 1.5
+        })
+    end
+end
+
+local function CreateFloatingButton()
+    if floatingGui then return end
+
+    floatingGui = Instance.new("ScreenGui")
+    floatingGui.Name = "AimbotButton"
+    floatingGui.ResetOnSpawn = false
+    floatingGui.Parent = player.PlayerGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 120, 0, 120)
+    frame.Position = UDim2.new(0, 20, 0, 100)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    frame.BackgroundTransparency = 0.05
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.ZIndex = 100
+    frame.Parent = floatingGui
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 12)
+    frameCorner.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 20)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "AIMBOT"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamBold
+    title.ZIndex = 101
+    title.Parent = frame
+
+    aimButton = Instance.new("TextButton")
+    aimButton.Size = UDim2.new(0, 80, 0, 50)
+    aimButton.Position = UDim2.new(0.5, -40, 0.5, -15)
+    aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    aimButton.BackgroundTransparency = 0.2
+    aimButton.BorderSizePixel = 2
+    aimButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    aimButton.ZIndex = 102
+    aimButton.Parent = frame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = aimButton
+
+    aimLabel = Instance.new("TextLabel")
+    aimLabel.Size = UDim2.new(1, 0, 1, 0)
+    aimLabel.BackgroundTransparency = 1
+    aimLabel.Text = "AIM OFF"
+    aimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    aimLabel.TextSize = 14
+    aimLabel.Font = Enum.Font.GothamBold
+    aimLabel.ZIndex = 103
+    aimLabel.Parent = aimButton
+
+    aimButton.MouseButton1Click:Connect(ToggleAimbot)
+    UpdateAimButton()
 end
 
 -- ============================================================
@@ -467,7 +516,7 @@ local function isPartVisible(part)
 end
 
 -- ============================================================
--- ===== ФУНКЦИИ АИМБОТА (С УЧЁТОМ БЕЛОГО СПИСКА) =====
+-- ===== ФУНКЦИИ АИМБОТА =====
 -- ============================================================
 local function getTargetClosestToCenter()
     local viewport = camera.ViewportSize
@@ -476,11 +525,12 @@ local function getTargetClosestToCenter()
     local best, bestDist = nil, math.huge
     local myHead = player.Character and player.Character:FindFirstChild("Head")
     local myTeam = player.Team
+    local myFriends = player.Friends
 
     for _, v in ipairs(game.Players:GetPlayers()) do
         if v == player or not v.Character then continue end
         if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
-        if isWhitelisted(v) then continue -- ПРОПУСКАЕМ ИГРОКОВ ИЗ БЕЛОГО СПИСКА
+        if settings.ignoreFriends and myFriends and v:IsFriendsWith(player.UserId) then continue end
 
         local hum = v.Character:FindFirstChild("Humanoid")
         if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then continue end
@@ -548,7 +598,7 @@ end
 -- ============================================================
 MainTab:CreateSection({ name = "Aimbot" })
 
-MainTab:CreateToggle({
+local aimbotToggle = MainTab:CreateToggle({
     name = "Включить аимбот",
     current = false,
     callback = function(v)
@@ -560,8 +610,11 @@ MainTab:CreateToggle({
             DestroyFOVCircle()
             lockedTarget = nil
         end
+        UpdateAimButton()
     end
 })
+
+MainTab.toggles = { AimbotToggle = aimbotToggle }
 
 MainTab:CreateSection({ name = "Настройки" })
 
@@ -573,7 +626,6 @@ MainTab:CreateSlider({
     current = settings.fov,
     callback = function(v)
         settings.fov = v
-        saveSettings(settings)
         UpdateFOVCircle(v)
     end
 })
@@ -586,18 +638,15 @@ MainTab:CreateSlider({
     current = settings.maxDistance,
     callback = function(v)
         settings.maxDistance = v
-        saveSettings(settings)
     end
 })
 
--- ТОЛЬКО HEAD И TORSO
 MainTab:CreateDropdown({
     name = "Часть тела",
-    options = {"Head", "Torso"},
+    options = {"Head", "HumanoidRootPart", "Torso"},
     current = settings.aimPart,
     callback = function(v)
         settings.aimPart = v
-        saveSettings(settings)
     end
 })
 
@@ -606,7 +655,6 @@ MainTab:CreateToggle({
     current = settings.visibleCheck,
     callback = function(v)
         settings.visibleCheck = v
-        saveSettings(settings)
     end
 })
 
@@ -615,7 +663,14 @@ MainTab:CreateToggle({
     current = settings.ignoreTeam,
     callback = function(v)
         settings.ignoreTeam = v
-        saveSettings(settings)
+    end
+})
+
+MainTab:CreateToggle({
+    name = "Игнорировать друзей",
+    current = settings.ignoreFriends,
+    callback = function(v)
+        settings.ignoreFriends = v
     end
 })
 
@@ -627,71 +682,75 @@ MainTab:CreateSlider({
     current = settings.resistance,
     callback = function(v)
         settings.resistance = v
-        saveSettings(settings)
     end
 })
 
--- ===== БЕЛЫЙ СПИСОК =====
-MainTab:CreateInput({
-    name = "Белый список (whitelist)",
-    placeholder = "Игрок1, Игрок2, ...",
-    current = settings.whitelist,
-    callback = function(Value)
-        settings.whitelist = Value
-        saveSettings(settings)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Белый список обновлён",
-            Duration = 2
-        })
+-- ============================================================
+-- ===== ВКЛАДКА VISUALS =====
+-- ============================================================
+VisualsTab:CreateSection({ name = "Настройки" })
+
+VisualsTab:CreateToggle({
+    name = "ESP",
+    current = settings.espEnabled,
+    callback = function(v)
+        settings.espEnabled = v
+        _G.ESP.Enabled = v
+        if not v then ClearESP() end
     end
 })
 
-MainTab:CreateSection({ name = "Управление" })
-
-MainTab:CreateButton({
-    name = "Найти цель",
-    callback = function()
-        if aimbotEnabled then
-            findTarget()
-            Rayfield:Notify({
-                Title = "Ryzen System",
-                Content = lockedTarget and "Цель: " .. lockedTarget.Name or "Целей нет",
-                Duration = 2
-            })
-        else
-            Rayfield:Notify({
-                Title = "Ryzen System",
-                Content = "Сначала включите аимбот!",
-                Duration = 2
-            })
-        end
+VisualsTab:CreateToggle({
+    name = "Name",
+    current = settings.showName,
+    callback = function(v)
+        settings.showName = v
+        _G.ESP.ShowName = v
     end
 })
 
-MainTab:CreateButton({
-    name = "Сбросить настройки",
-    callback = function()
-        settings.fov = 20
-        settings.maxDistance = 50
-        settings.aimPart = "Head"
-        settings.visibleCheck = true
-        settings.ignoreTeam = false
-        settings.resistance = 0.85
-        settings.whitelist = ""
-        saveSettings(settings)
-        UpdateFOVCircle(20)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Настройки сброшены",
-            Duration = 2
-        })
+VisualsTab:CreateToggle({
+    name = "Distance",
+    current = settings.showDistance,
+    callback = function(v)
+        settings.showDistance = v
+        _G.ESP.ShowDistance = v
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Team",
+    current = settings.showTeam,
+    callback = function(v)
+        settings.showTeam = v
+        _G.ESP.ShowTeam = v
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Highlight",
+    current = settings.showHighlight,
+    callback = function(v)
+        settings.showHighlight = v
+        _G.ESP.ShowHighlight = v
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Look Direction",
+    current = settings.showLookDirection,
+    callback = function(v)
+        settings.showLookDirection = v
+        _G.ESP.ShowLookDirection = v
     end
 })
 
 -- ============================================================
 -- ===== ЗАПУСК =====
 -- ============================================================
+CreateFloatingButton()
+task.wait(2)
+
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
     if not lockedTarget or not lockedTarget.Character then
@@ -720,9 +779,11 @@ player.CharacterAdded:Connect(function()
     aimbotEnabled = false
     lockedTarget = nil
     DestroyFOVCircle()
+    UpdateAimButton()
 end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Белый список загружены",
+    Content = "Аимбот + Visuals загружены",
     Duration = 3
+})
