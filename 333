@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + КНОПКА AIM + VISUALS + ЧЁРНЫЙ СПИСОК
+-- Ryzen Aimbot v17.1 [Rayfield Gen2] + КНОПКА AIM + VISUALS + WHITELIST
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -28,7 +28,7 @@ local function loadSettings()
         showTeam = false,
         showLookDirection = false,
         showHighlight = false,
-        blacklist = "" -- сохраняем чёрный список
+        whitelist = {} -- <-- Список игнорируемых игроков
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -59,6 +59,7 @@ local Window = Rayfield:CreateWindow({
 
 local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })
 local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })
+local WhitelistTab = Window:CreateTab({ name = "Whitelist", icon = 0 }) -- <-- Новая вкладка
 
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -67,26 +68,76 @@ local lockedTarget = nil
 local settings = loadSettings()
 
 -- ============================================================
--- ===== ЧЁРНЫЙ СПИСОК =====
+-- ===== WHITELIST (БЕЛЫЙ СПИСОК) =====
 -- ============================================================
-local blacklist = {}
+local whitelistNames = {}
 
-local function updateBlacklistFromString(text)
-    blacklist = {}
-    if text and text ~= "" then
-        for name in string.gmatch(text, "[^,]+") do
-            local trimmed = name:gsub("^%s*(.-)%s*$", "%1")
-            if trimmed ~= "" then
-                table.insert(blacklist, trimmed)
-            end
+-- Загружаем белый список из настроек
+for _, name in ipairs(settings.whitelist or {}) do
+    whitelistNames[name:lower()] = true
+end
+
+local function UpdateWhitelistFromText(text)
+    whitelistNames = {}
+    local names = {}
+    for _, name in ipairs(text:split(",")) do
+        local trimmed = name:gsub("^%s*(.-)%s*$", "%1")
+        if trimmed ~= "" then
+            names[#names + 1] = trimmed
+            whitelistNames[trimmed:lower()] = true
         end
     end
+    settings.whitelist = names
+    saveSettings(settings)
+    print("Ryzen: Белый список обновлён. Игроков в списке:", #names)
 end
 
--- Загружаем чёрный список из настроек
-if settings.blacklist and settings.blacklist ~= "" then
-    updateBlacklistFromString(settings.blacklist)
+local function IsPlayerWhitelisted(plr)
+    return whitelistNames[plr.Name:lower()] == true
 end
+
+-- ===== ВКЛАДКА WHITELIST =====
+WhitelistTab:CreateSection({ name = "Игнорируемые игроки" })
+
+local whitelistInput = WhitelistTab:CreateTextBox({
+    name = "Введите имена через запятую",
+    placeholder = "Игрок1, Игрок2, Игрок3",
+    current = table.concat(settings.whitelist or {}, ", "),
+    flag = "WhitelistInput",
+    callback = function(Value)
+        UpdateWhitelistFromText(Value)
+    end
+})
+
+WhitelistTab:CreateButton({
+    name = "Обновить белый список",
+    callback = function()
+        local currentText = whitelistInput:GetCurrentValue() or ""
+        UpdateWhitelistFromText(currentText)
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Белый список обновлён",
+            Duration = 1.5
+        })
+    end
+})
+
+WhitelistTab:CreateButton({
+    name = "Очистить белый список",
+    callback = function()
+        whitelistNames = {}
+        settings.whitelist = {}
+        saveSettings(settings)
+        if whitelistInput.SetCurrentValue then
+            whitelistInput:SetCurrentValue("")
+        end
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Белый список очищен",
+            Duration = 1.5
+        })
+    end
+})
 
 -- ============================================================
 -- ===== ПЛАВАЮЩАЯ КНОПКА AIM =====
@@ -393,16 +444,7 @@ local function UpdateESP()
     
     for _, plr in ipairs(game.Players:GetPlayers()) do
         if plr == player then continue end
-        
-        -- Проверка чёрного списка для ESP (скрываем игроков из чёрного списка)
-        local inBlacklist = false
-        for _, name in ipairs(blacklist) do
-            if string.lower(plr.Name) == string.lower(name) then
-                inBlacklist = true
-                break
-            end
-        end
-        if inBlacklist then
+        if IsPlayerWhitelisted(plr) then -- <-- Пропускаем игроков из белого списка
             if espObjects[plr.Name] then RemoveESPObjects(plr.Name) end
             continue
         end
@@ -597,19 +639,8 @@ local function getTargetClosestToCenter()
 
     for _, v in ipairs(game.Players:GetPlayers()) do
         if v == player or not v.Character then continue end
-        
-        -- ===== ПРОВЕРКА ЧЁРНОГО СПИСКА =====
-        local inBlacklist = false
-        for _, name in ipairs(blacklist) do
-            if string.lower(v.Name) == string.lower(name) then
-                inBlacklist = true
-                break
-            end
-        end
-        if inBlacklist then continue end
-        -- =====================================
-        
         if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
+        if IsPlayerWhitelisted(v) then continue end -- <-- Пропускаем игроков из белого списка
 
         local hum = v.Character:FindFirstChild("Humanoid")
         if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then continue end
@@ -763,42 +794,6 @@ MainTab:CreateSlider({
 })
 
 -- ============================================================
--- ===== ЧЁРНЫЙ СПИСОК (ТЕКСТОВЫЙ БОКС) =====
--- ============================================================
-MainTab:CreateSection({ name = "Чёрный список" })
-
-MainTab:CreateTextInput({
-    name = "Игнорировать игроков",
-    placeholder = "Введите имена через запятую",
-    remove_placeholders_on_focus = false,
-    current = settings.blacklist or "",
-    callback = function(text)
-        settings.blacklist = text
-        saveSettings(settings)
-        updateBlacklistFromString(text)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Чёрный список обновлён (" .. #blacklist .. " игроков)",
-            Duration = 2
-        })
-    end
-})
-
-MainTab:CreateButton({
-    name = "🧹 Очистить чёрный список",
-    callback = function()
-        blacklist = {}
-        settings.blacklist = ""
-        saveSettings(settings)
-        Rayfield:Notify({
-            Title = "Ryzen System",
-            Content = "Чёрный список очищен",
-            Duration = 2
-        })
-    end
-})
-
--- ============================================================
 -- ===== ВКЛАДКА VISUALS =====
 -- ============================================================
 VisualsTab:CreateSection({ name = "Настройки" })
@@ -868,6 +863,7 @@ VisualsTab:CreateToggle({
 -- ===== ЗАПУСК =====
 -- ============================================================
 CreateFloatingButton()
+task.wait(2)
 
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
@@ -902,6 +898,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals + Чёрный список загружены",
+    Content = "Аимбот + Visuals + Whitelist загружены",
     Duration = 3
 })
