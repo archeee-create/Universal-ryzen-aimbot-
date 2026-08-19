@@ -1,4 +1,4 @@
--- Ryzen Aimbot v18.1 [Rayfield Gen2] + Вайтлист (Мульти-дропдаун)
+-- Ryzen Aimbot v22 [Rayfield Gen2] + Цель (all / список)
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== СОХРАНЕНИЕ =====
@@ -26,9 +26,8 @@ local function loadSettings()
         showName = false,
         showDistance = false,
         showTeam = false,
-        showLookDirection = false,
         showHighlight = false,
-        whitelist = {}
+        targetList = {}
     }
     if not ensureFolder() then return default end
     if not isfile(fullPath) then return default end
@@ -59,7 +58,7 @@ local Window = Rayfield:CreateWindow({
 
 local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })
 local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })
-local WhitelistTab = Window:CreateTab({ name = "Whitelist", icon = 0 })
+local TargetTab = Window:CreateTab({ name = "Цель", icon = 0 })
 
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -247,7 +246,6 @@ _G.ESP = {
     ShowName = false,
     ShowDistance = false,
     ShowTeam = false,
-    ShowLookDirection = false,
     ShowHighlight = false,
 }
 
@@ -280,10 +278,7 @@ local function CreateESPObjects(plr)
         nameLabel = Instance.new("TextLabel"),
         distanceLabel = Instance.new("TextLabel"),
         teamLabel = Instance.new("TextLabel"),
-        highlight = Instance.new("Highlight"),
-        lookArrow = nil,
-        lookArrowTip = nil,
-        arrowCreated = false
+        highlight = Instance.new("Highlight")
     }
     
     obj.nameLabel.Size = UDim2.new(0, 200, 0, 20)
@@ -346,8 +341,6 @@ local function RemoveESPObjects(name)
     if not obj then return end
     if obj.gui then obj.gui:Destroy() end
     if obj.highlight then obj.highlight:Destroy() end
-    if obj.lookArrow then obj.lookArrow:Destroy() end
-    if obj.lookArrowTip then obj.lookArrowTip:Destroy() end
     espObjects[name] = nil
 end
 
@@ -400,8 +393,6 @@ local function UpdateESP()
             if obj.distanceLabel then obj.distanceLabel.Visible = false end
             if obj.teamLabel then obj.teamLabel.Visible = false end
             if obj.highlight then obj.highlight.Enabled = false end
-            if obj.lookArrow then obj.lookArrow.Visible = false end
-            if obj.lookArrowTip then obj.lookArrowTip.Visible = false end
             continue
         end
         
@@ -444,68 +435,6 @@ local function UpdateESP()
             obj.teamLabel.TextColor3 = teamColor
         else
             if obj.teamLabel then obj.teamLabel.Visible = false end
-        end
-        
-        if cfg.ShowLookDirection then
-            if not obj.arrowCreated then
-                local arrow = Instance.new("Frame")
-                arrow.Size = UDim2.new(0, 2, 0, 30)
-                arrow.BackgroundColor3 = teamColor
-                arrow.BackgroundTransparency = 0.3
-                arrow.BorderSizePixel = 0
-                arrow.Visible = false
-                arrow.Parent = obj.gui
-                obj.lookArrow = arrow
-                
-                local tip = Instance.new("Frame")
-                tip.Size = UDim2.new(0, 8, 0, 8)
-                tip.BackgroundColor3 = teamColor
-                tip.BackgroundTransparency = 0.3
-                tip.BorderSizePixel = 0
-                tip.Visible = false
-                tip.Parent = obj.gui
-                obj.lookArrowTip = tip
-                obj.arrowCreated = true
-            end
-            
-            if obj.lookArrow and obj.lookArrowTip then
-                local lookVector = root.CFrame.LookVector
-                local endPos = root.Position + (lookVector * 5)
-                local endPos2D, endOnScreen = WorldToViewport(endPos)
-                
-                if endOnScreen then
-                    local dx = endPos2D.X - rootPos.X
-                    local dy = endPos2D.Y - rootPos.Y
-                    local angle = math.atan2(dy, dx)
-                    local length = math.sqrt(dx*dx + dy*dy)
-                    
-                    obj.lookArrow.Visible = true
-                    obj.lookArrow.Size = UDim2.new(0, length, 0, 2)
-                    obj.lookArrow.Position = UDim2.new(0, rootPos.X, 0, rootPos.Y - 1)
-                    obj.lookArrow.Rotation = math.deg(angle)
-                    obj.lookArrow.BackgroundColor3 = teamColor
-                    
-                    obj.lookArrowTip.Visible = true
-                    obj.lookArrowTip.Position = UDim2.new(0, endPos2D.X - 4, 0, endPos2D.Y - 4)
-                    obj.lookArrowTip.BackgroundColor3 = teamColor
-                    obj.lookArrowTip.Rotation = math.deg(angle)
-                else
-                    if obj.lookArrow then obj.lookArrow.Visible = false end
-                    if obj.lookArrowTip then obj.lookArrowTip.Visible = false end
-                end
-            end
-        else
-            if obj.lookArrow then
-                obj.lookArrow.Visible = false
-                obj.lookArrow:Destroy()
-                obj.lookArrow = nil
-            end
-            if obj.lookArrowTip then
-                obj.lookArrowTip.Visible = false
-                obj.lookArrowTip:Destroy()
-                obj.lookArrowTip = nil
-            end
-            obj.arrowCreated = false
         end
     end
 end
@@ -553,9 +482,11 @@ end
 -- ============================================================
 -- ===== ФУНКЦИИ АИМБОТА =====
 -- ============================================================
-local function isWhitelisted(plr)
-    if not settings.whitelist then return false end
-    for _, name in ipairs(settings.whitelist) do
+local function isTargeted(plr)
+    if not settings.targetList then return true end
+    if #settings.targetList == 0 then return true end
+    if settings.targetList[1] == "all" then return true end
+    for _, name in ipairs(settings.targetList) do
         if name == plr.Name then return true end
     end
     return false
@@ -572,15 +503,12 @@ local function getTargetClosestToCenter()
     for _, v in ipairs(game.Players:GetPlayers()) do
         if v == player or not v.Character then continue end
         if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
-        if isWhitelisted(v) then continue end
+        if not isTargeted(v) then continue end
 
         local hum = v.Character:FindFirstChild("Humanoid")
         if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then continue end
 
-        local part = v.Character:FindFirstChild(settings.aimPart)
-        if not part then
-            part = v.Character:FindFirstChild("Head") or v.Character:FindFirstChild("HumanoidRootPart")
-        end
+        local part = v.Character:FindFirstChild("Head")
         if not part then continue end
         if myHead and part == myHead then continue end
         if part:IsDescendantOf(player.Character) then continue end
@@ -610,13 +538,9 @@ end
 local function lockTarget(target)
     if not target or not target.Character then return end
     
-    local part = target.Character:FindFirstChild(settings.aimPart)
-    if not part then
-        part = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
-    end
+    local part = target.Character:FindFirstChild("Head")
     if not part then return end
     
-    -- Открепление по дистанции
     local origin = camera.CFrame.Position
     local dist = (part.Position - origin).magnitude
     if dist > settings.maxDistance then
@@ -696,8 +620,8 @@ MainTab:CreateSlider({
 
 MainTab:CreateDropdown({
     name = "Часть тела",
-    options = {"Head", "HumanoidRootPart", "Torso"},
-    current = settings.aimPart,
+    options = {"Head"},
+    current = "Head",
     callback = function(v)
         settings.aimPart = v
         saveSettings(settings)
@@ -790,173 +714,101 @@ VisualsTab:CreateToggle({
     end
 })
 
-VisualsTab:CreateToggle({
-    name = "Look Direction",
-    current = settings.showLookDirection,
-    callback = function(v)
-        settings.showLookDirection = v
-        _G.ESP.ShowLookDirection = v
-        saveSettings(settings)
-    end
-})
-
 -- ============================================================
--- ===== ВАЙТЛИСТ (МУЛЬТИ-ДРОПДАУН) =====
+-- ===== ВКЛАДКА "ЦЕЛЬ" =====
 -- ============================================================
-local selectedWhitelistPlayers = {}
+TargetTab:CreateSection({ name = "Цель" })
 
-local function updateWhitelistDropdown()
-    local playerNames = {}
-    for _, plr in ipairs(game.Players:GetPlayers()) do
-        if plr ~= player then
-            table.insert(playerNames, plr.Name)
-        end
-    end
-    if #playerNames == 0 then
-        table.insert(playerNames, "Нет игроков")
-    end
-    return playerNames
-end
-
-WhitelistTab:CreateSection({ name = "Вайтлист (игнорирование)" })
-
-WhitelistTab:CreateParagraph({
+TargetTab:CreateParagraph({
     name = "Информация",
-    text = "Выбери игроков из списка (можно несколько). Они не будут аимиться."
+    text = "Пустое поле или 'all' — аимбот на всех.\nИмена через запятую — только на них."
 })
 
-local whitelistDropdown = WhitelistTab:CreateDropdown({
-    name = "Выберите игроков",
-    options = updateWhitelistDropdown(),
-    current = {},
-    Multiple = true,
-    callback = function(v)
-        selectedWhitelistPlayers = v or {}
-    end
-})
-
-WhitelistTab:CreateButton({
-    name = "➕ Добавить выбранных в вайтлист",
-    callback = function()
-        if not selectedWhitelistPlayers or #selectedWhitelistPlayers == 0 then
-            Rayfield:Notify({
-                Title = "Ошибка",
-                Content = "Выбери хотя бы одного игрока",
-                Duration = 2
-            })
-            return
-        end
-        
-        if not settings.whitelist then settings.whitelist = {} end
-        local added = 0
-        for _, name in ipairs(selectedWhitelistPlayers) do
-            local alreadyExists = false
-            for _, existing in ipairs(settings.whitelist) do
-                if existing == name then
-                    alreadyExists = true
-                    break
-                end
-            end
-            if not alreadyExists then
-                table.insert(settings.whitelist, name)
-                added = added + 1
-            end
-        end
-        
-        saveSettings(settings)
-        Rayfield:Notify({
-            Title = "Готово",
-            Content = "Добавлено " .. added .. " игроков в вайтлист",
-            Duration = 2
-        })
-    end
-})
-
-WhitelistTab:CreateButton({
-    name = "➖ Удалить выбранных из вайтлиста",
-    callback = function()
-        if not selectedWhitelistPlayers or #selectedWhitelistPlayers == 0 then
-            Rayfield:Notify({
-                Title = "Ошибка",
-                Content = "Выбери игроков для удаления",
-                Duration = 2
-            })
-            return
-        end
-        
-        if not settings.whitelist then settings.whitelist = {} end
-        local removed = 0
-        for _, name in ipairs(selectedWhitelistPlayers) do
-            for i, existing in ipairs(settings.whitelist) do
-                if existing == name then
-                    table.remove(settings.whitelist, i)
-                    removed = removed + 1
-                    break
+TargetTab:CreateTextBox({
+    name = "Игроки",
+    placeholder = "Игрок1, Игрок2, all",
+    removeTextAfterFocusLost = false,
+    callback = function(Value)
+        local names = {}
+        if Value ~= "" then
+            for name in string.gmatch(Value, "[^,]+") do
+                local trimmed = string.gsub(name, "^%s*(.-)%s*$", "%1")
+                if trimmed ~= "" then
+                    table.insert(names, trimmed)
                 end
             end
         end
-        
+        settings.targetList = names
         saveSettings(settings)
-        Rayfield:Notify({
-            Title = "Готово",
-            Content = "Удалено " .. removed .. " игроков из вайтлиста",
-            Duration = 2
-        })
+        
+        if #names == 0 then
+            Rayfield:Notify({
+                Title = "Цель: все",
+                Content = "Аимбот берёт всех игроков",
+                Duration = 2
+            })
+        elseif names[1] == "all" then
+            Rayfield:Notify({
+                Title = "Цель: все",
+                Content = "Аимбот берёт всех игроков",
+                Duration = 2
+            })
+        else
+            Rayfield:Notify({
+                Title = "Цель обновлена",
+                Content = #names .. " игроков в списке",
+                Duration = 2
+            })
+        end
     end
 })
 
-WhitelistTab:CreateButton({
-    name = "📋 Показать вайтлист",
+TargetTab:CreateButton({
+    name = "📋 Показать текущую цель",
     callback = function()
-        if not settings.whitelist or #settings.whitelist == 0 then
+        if not settings.targetList or #settings.targetList == 0 then
             Rayfield:Notify({
-                Title = "Вайтлист пуст",
-                Content = "В вайтлисте нет игроков",
+                Title = "Цель: все",
+                Content = "Аимбот берёт всех игроков",
                 Duration = 2
             })
             return
         end
-        
-        local text = table.concat(settings.whitelist, ", ")
+        if settings.targetList[1] == "all" then
+            Rayfield:Notify({
+                Title = "Цель: все",
+                Content = "Аимбот берёт всех игроков",
+                Duration = 2
+            })
+            return
+        end
+        local text = table.concat(settings.targetList, ", ")
         Rayfield:Notify({
-            Title = "Вайтлист (" .. #settings.whitelist .. ")",
+            Title = "Цель (" .. #settings.targetList .. ")",
             Content = text,
             Duration = 4
         })
     end
 })
 
-WhitelistTab:CreateButton({
-    name = "🔄 Обновить список игроков",
+TargetTab:CreateButton({
+    name = "🗑 Сбросить (все игроки)",
     callback = function()
-        local players = updateWhitelistDropdown()
-        whitelistDropdown:SetOptions(players)
+        settings.targetList = {}
+        saveSettings(settings)
         Rayfield:Notify({
-            Title = "Обновлено",
-            Content = "Список игроков обновлён",
-            Duration = 1.5
+            Title = "Цель: все",
+            Content = "Аимбот берёт всех игроков",
+            Duration = 2
         })
     end
 })
-
-game.Players.PlayerAdded:Connect(function()
-    local players = updateWhitelistDropdown()
-    whitelistDropdown:SetOptions(players)
-end)
-
-game.Players.PlayerRemoving:Connect(function()
-    local players = updateWhitelistDropdown()
-    whitelistDropdown:SetOptions(players)
-end)
 
 -- ============================================================
 -- ===== ЗАПУСК =====
 -- ============================================================
 CreateFloatingButton()
 task.wait(2)
-
-local players = updateWhitelistDropdown()
-whitelistDropdown:SetOptions(players)
 
 game:GetService("RunService").RenderStepped:Connect(function()
     if not aimbotEnabled then return end
@@ -965,10 +817,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         return
     end
     
-    local part = lockedTarget.Character:FindFirstChild(settings.aimPart)
-    if not part then
-        part = lockedTarget.Character:FindFirstChild("Head") or lockedTarget.Character:FindFirstChild("HumanoidRootPart")
-    end
+    local part = lockedTarget.Character:FindFirstChild("Head")
     if not part then
         findTarget()
         return
@@ -991,6 +840,6 @@ end)
 
 Rayfield:Notify({
     Title = "Ryzen System",
-    Content = "Аимбот + Visuals + Вайтлист (мульти-дропдаун) загружены",
+    Content = "Аимбот + Visuals + Цель загружены",
     Duration = 3
 })
