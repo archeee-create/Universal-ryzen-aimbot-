@@ -1,0 +1,991 @@
+-- Ryzen Aimbot v18.0 [Rayfield Gen2] + Вайтлист (Dropdown) + Открепление по дистанции
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+
+-- ===== СОХРАНЕНИЕ =====
+local saveFolder = "RyzenAimbot"
+local saveFile = "settings.json"
+local fullPath = saveFolder .. "/" .. saveFile
+
+local function ensureFolder()
+    if not isfolder then return false end
+    if not isfolder(saveFolder) then
+        pcall(function() makefolder(saveFolder) end)
+    end
+    return isfolder(saveFolder)
+end
+
+local function loadSettings()
+    local default = {
+        fov = 20,
+        maxDistance = 50,
+        aimPart = "Head",
+        visibleCheck = true,
+        ignoreTeam = false,
+        resistance = 0.85,
+        espEnabled = false,
+        showName = false,
+        showDistance = false,
+        showTeam = false,
+        showLookDirection = false,
+        showHighlight = false,
+        whitelist = {}
+    }
+    if not ensureFolder() then return default end
+    if not isfile(fullPath) then return default end
+    local success, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(readfile(fullPath))
+    end)
+    if success and type(data) == "table" then
+        for k, v in pairs(default) do
+            if data[k] == nil then data[k] = v end
+        end
+        return data
+    end
+    return default
+end
+
+local function saveSettings(data)
+    if not ensureFolder() then return end
+    pcall(function()
+        writefile(fullPath, game:GetService("HttpService"):JSONEncode(data))
+    end)
+end
+
+-- ===== МЕНЮ =====
+local Window = Rayfield:CreateWindow({
+    Name = "Ryzen System",
+    ConfigurationSaving = { Enabled = false }
+})
+
+local MainTab = Window:CreateTab({ name = "Aimbot", icon = 0 })
+local VisualsTab = Window:CreateTab({ name = "Visuals", icon = 0 })
+local WhitelistTab = Window:CreateTab({ name = "Whitelist", icon = 0 })
+
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local aimbotEnabled = false
+local lockedTarget = nil
+local settings = loadSettings()
+
+-- ============================================================
+-- ===== ПЛАВАЮЩАЯ КНОПКА AIM =====
+-- ============================================================
+local aimButton = nil
+local aimLabel = nil
+local floatingGui = nil
+
+local function UpdateAimButton()
+    if aimButton then
+        if aimbotEnabled then
+            aimButton.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+            aimLabel.Text = "AIM ON"
+        else
+            aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            aimLabel.Text = "AIM OFF"
+        end
+    end
+end
+
+local function ToggleAimbot()
+    aimbotEnabled = not aimbotEnabled
+    UpdateAimButton()
+    
+    if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
+        MainTab.toggles.AimbotToggle:Set(aimbotEnabled)
+    end
+    
+    if aimbotEnabled then
+        CreateFOVCircle()
+        findTarget()
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВКЛЮЧЕН",
+            Duration = 1.5
+        })
+    else
+        DestroyFOVCircle()
+        lockedTarget = nil
+        Rayfield:Notify({
+            Title = "Ryzen System",
+            Content = "Аимбот ВЫКЛЮЧЕН",
+            Duration = 1.5
+        })
+    end
+end
+
+local function CreateFloatingButton()
+    if floatingGui then return end
+
+    floatingGui = Instance.new("ScreenGui")
+    floatingGui.Name = "AimbotButton"
+    floatingGui.ResetOnSpawn = false
+    floatingGui.Parent = player.PlayerGui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 120, 0, 120)
+    frame.Position = UDim2.new(0, 20, 0, 100)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    frame.BackgroundTransparency = 0.05
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.ZIndex = 100
+    frame.Parent = floatingGui
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 12)
+    frameCorner.Parent = frame
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 20)
+    title.Position = UDim2.new(0, 0, 0, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "AIMBOT"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.TextSize = 14
+    title.Font = Enum.Font.GothamBold
+    title.ZIndex = 101
+    title.Parent = frame
+
+    aimButton = Instance.new("TextButton")
+    aimButton.Size = UDim2.new(0, 80, 0, 50)
+    aimButton.Position = UDim2.new(0.5, -40, 0.5, -15)
+    aimButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    aimButton.BackgroundTransparency = 0.2
+    aimButton.BorderSizePixel = 2
+    aimButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    aimButton.ZIndex = 102
+    aimButton.Parent = frame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = aimButton
+
+    aimLabel = Instance.new("TextLabel")
+    aimLabel.Size = UDim2.new(1, 0, 1, 0)
+    aimLabel.BackgroundTransparency = 1
+    aimLabel.Text = "AIM OFF"
+    aimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    aimLabel.TextSize = 14
+    aimLabel.Font = Enum.Font.GothamBold
+    aimLabel.ZIndex = 103
+    aimLabel.Parent = aimButton
+
+    aimButton.MouseButton1Click:Connect(ToggleAimbot)
+    UpdateAimButton()
+end
+
+-- ============================================================
+-- ===== FOV КРУГ =====
+-- ============================================================
+local fovSize = settings.fov
+local fovCircle = nil
+local circleFrame = nil
+
+local function CreateFOVCircle()
+    if fovCircle then
+        fovCircle:Destroy()
+        fovCircle = nil
+        circleFrame = nil
+    end
+    
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "FOVCircle"
+    gui.Parent = player.PlayerGui
+    
+    local circle = Instance.new("Frame")
+    circle.Size = UDim2.new(0, fovSize * 2, 0, fovSize * 2)
+    circle.Position = UDim2.new(0.5, -fovSize, 0.5, -fovSize - 30)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    circle.BackgroundTransparency = 1
+    circle.BorderSizePixel = 0
+    circle.ClipsDescendants = true
+    circle.Parent = gui
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = circle
+    
+    local outline = Instance.new("UIStroke")
+    outline.Thickness = 2
+    outline.Color = Color3.fromRGB(255, 0, 0)
+    outline.Transparency = 0
+    outline.Parent = circle
+    
+    fovCircle = gui
+    circleFrame = circle
+end
+
+local function DestroyFOVCircle()
+    if fovCircle then
+        fovCircle:Destroy()
+        fovCircle = nil
+        circleFrame = nil
+    end
+end
+
+local function UpdateFOVCircle(newSize)
+    if not circleFrame then return end
+    fovSize = newSize
+    
+    local tweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local tween = game:GetService("TweenService"):Create(
+        circleFrame,
+        tweenInfo,
+        {
+            Size = UDim2.new(0, newSize * 2, 0, newSize * 2),
+            Position = UDim2.new(0.5, -newSize, 0.5, -newSize - 30)
+        }
+    )
+    tween:Play()
+end
+
+-- ============================================================
+-- ===== ESP =====
+-- ============================================================
+_G.ESP = {
+    Enabled = false,
+    ShowName = false,
+    ShowDistance = false,
+    ShowTeam = false,
+    ShowLookDirection = false,
+    ShowHighlight = false,
+}
+
+local espObjects = {}
+
+local function GetTeamColor(plr)
+    if plr.Team and plr.Team.TeamColor then return plr.Team.TeamColor.Color end
+    if plr.TeamColor then return plr.TeamColor.Color end
+    return Color3.fromRGB(255, 255, 255)
+end
+
+local function GetTeamName(plr)
+    return plr.Team and plr.Team.Name or ""
+end
+
+local function WorldToViewport(pos)
+    return camera:WorldToViewportPoint(pos)
+end
+
+local function CreateESPObjects(plr)
+    if espObjects[plr.Name] then return end
+    
+    local gui = Instance.new("ScreenGui")
+    gui.Name = plr.Name .. "_ESP"
+    gui.ResetOnSpawn = false
+    gui.Parent = player.PlayerGui
+    
+    local obj = {
+        gui = gui,
+        nameLabel = Instance.new("TextLabel"),
+        distanceLabel = Instance.new("TextLabel"),
+        teamLabel = Instance.new("TextLabel"),
+        highlight = Instance.new("Highlight"),
+        lookArrow = nil,
+        lookArrowTip = nil,
+        arrowCreated = false
+    }
+    
+    obj.nameLabel.Size = UDim2.new(0, 200, 0, 20)
+    obj.nameLabel.BackgroundTransparency = 1
+    obj.nameLabel.Font = Enum.Font.GothamBold
+    obj.nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    obj.nameLabel.TextSize = 14
+    obj.nameLabel.TextStrokeTransparency = 0.3
+    obj.nameLabel.Visible = false
+    obj.nameLabel.Parent = gui
+    
+    obj.distanceLabel.Size = UDim2.new(0, 100, 0, 16)
+    obj.distanceLabel.BackgroundTransparency = 1
+    obj.distanceLabel.Font = Enum.Font.GothamMedium
+    obj.distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    obj.distanceLabel.TextSize = 11
+    obj.distanceLabel.TextStrokeTransparency = 0.3
+    obj.distanceLabel.Visible = false
+    obj.distanceLabel.Parent = gui
+    
+    obj.teamLabel.Size = UDim2.new(0, 100, 0, 14)
+    obj.teamLabel.BackgroundTransparency = 1
+    obj.teamLabel.Font = Enum.Font.GothamBold
+    obj.teamLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    obj.teamLabel.TextSize = 10
+    obj.teamLabel.TextStrokeTransparency = 0.3
+    obj.teamLabel.Visible = false
+    obj.teamLabel.Parent = gui
+    
+    obj.highlight.Name = "RyzenHighlight"
+    obj.highlight.FillTransparency = 0.5
+    obj.highlight.OutlineTransparency = 0.3
+    obj.highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    obj.highlight.Enabled = false
+    obj.highlight.Parent = gui
+    
+    local function AttachHighlight(char)
+        if char then
+            obj.highlight.Adornee = char
+            obj.highlight.Parent = char
+        end
+    end
+    AttachHighlight(plr.Character)
+    
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(0.2)
+        AttachHighlight(char)
+        if espObjects[plr.Name] then
+            espObjects[plr.Name].gui:Destroy()
+            espObjects[plr.Name] = nil
+            CreateESPObjects(plr)
+        end
+    end)
+    
+    espObjects[plr.Name] = obj
+end
+
+local function RemoveESPObjects(name)
+    local obj = espObjects[name]
+    if not obj then return end
+    if obj.gui then obj.gui:Destroy() end
+    if obj.highlight then obj.highlight:Destroy() end
+    if obj.lookArrow then obj.lookArrow:Destroy() end
+    if obj.lookArrowTip then obj.lookArrowTip:Destroy() end
+    espObjects[name] = nil
+end
+
+local function ClearESP()
+    for name, _ in pairs(espObjects) do
+        RemoveESPObjects(name)
+    end
+    espObjects = {}
+end
+
+local function UpdateESP()
+    local cfg = _G.ESP
+    if not cfg.Enabled then
+        ClearESP()
+        return
+    end
+    
+    local myChar = player.Character
+    if not myChar then return end
+    local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+    
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr == player then continue end
+        
+        local char = plr.Character
+        if not char or not char.Parent then
+            if espObjects[plr.Name] then RemoveESPObjects(plr.Name) end
+            continue
+        end
+        
+        local hum = char:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 then
+            if espObjects[plr.Name] then RemoveESPObjects(plr.Name) end
+            continue
+        end
+        
+        local head = char:FindFirstChild("Head")
+        local root = char:FindFirstChild("HumanoidRootPart")
+        if not head or not root then continue end
+        
+        if not espObjects[plr.Name] then CreateESPObjects(plr) end
+        local obj = espObjects[plr.Name]
+        
+        local headPos, headOnScreen = WorldToViewport(head.Position)
+        local rootPos, rootOnScreen = WorldToViewport(root.Position)
+        
+        if not headOnScreen or not rootOnScreen then
+            if obj.nameLabel then obj.nameLabel.Visible = false end
+            if obj.distanceLabel then obj.distanceLabel.Visible = false end
+            if obj.teamLabel then obj.teamLabel.Visible = false end
+            if obj.highlight then obj.highlight.Enabled = false end
+            if obj.lookArrow then obj.lookArrow.Visible = false end
+            if obj.lookArrowTip then obj.lookArrowTip.Visible = false end
+            continue
+        end
+        
+        local teamColor = GetTeamColor(plr)
+        local teamName = GetTeamName(plr)
+        
+        if cfg.ShowHighlight and obj.highlight then
+            obj.highlight.Enabled = true
+            obj.highlight.FillColor = teamColor
+            obj.highlight.FillTransparency = 0.4
+            obj.highlight.OutlineColor = teamColor
+            obj.highlight.OutlineTransparency = 0.1
+        else
+            if obj.highlight then obj.highlight.Enabled = false end
+        end
+        
+        if cfg.ShowName and obj.nameLabel then
+            obj.nameLabel.Visible = true
+            obj.nameLabel.Text = plr.Name
+            obj.nameLabel.Position = UDim2.new(0, headPos.X - 100, 0, headPos.Y - 50)
+            obj.nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        else
+            if obj.nameLabel then obj.nameLabel.Visible = false end
+        end
+        
+        if cfg.ShowDistance and obj.distanceLabel then
+            local dist = (myRoot.Position - root.Position).Magnitude
+            obj.distanceLabel.Visible = true
+            obj.distanceLabel.Text = string.format("%.0f studs", dist)
+            obj.distanceLabel.Position = UDim2.new(0, headPos.X - 50, 0, headPos.Y - 30)
+            obj.distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        else
+            if obj.distanceLabel then obj.distanceLabel.Visible = false end
+        end
+        
+        if cfg.ShowTeam and obj.teamLabel and teamName ~= "" then
+            obj.teamLabel.Visible = true
+            obj.teamLabel.Text = teamName
+            obj.teamLabel.Position = UDim2.new(0, headPos.X - 50, 0, headPos.Y + 15)
+            obj.teamLabel.TextColor3 = teamColor
+        else
+            if obj.teamLabel then obj.teamLabel.Visible = false end
+        end
+        
+        if cfg.ShowLookDirection then
+            if not obj.arrowCreated then
+                local arrow = Instance.new("Frame")
+                arrow.Size = UDim2.new(0, 2, 0, 30)
+                arrow.BackgroundColor3 = teamColor
+                arrow.BackgroundTransparency = 0.3
+                arrow.BorderSizePixel = 0
+                arrow.Visible = false
+                arrow.Parent = obj.gui
+                obj.lookArrow = arrow
+                
+                local tip = Instance.new("Frame")
+                tip.Size = UDim2.new(0, 8, 0, 8)
+                tip.BackgroundColor3 = teamColor
+                tip.BackgroundTransparency = 0.3
+                tip.BorderSizePixel = 0
+                tip.Visible = false
+                tip.Parent = obj.gui
+                obj.lookArrowTip = tip
+                obj.arrowCreated = true
+            end
+            
+            if obj.lookArrow and obj.lookArrowTip then
+                local lookVector = root.CFrame.LookVector
+                local endPos = root.Position + (lookVector * 5)
+                local endPos2D, endOnScreen = WorldToViewport(endPos)
+                
+                if endOnScreen then
+                    local dx = endPos2D.X - rootPos.X
+                    local dy = endPos2D.Y - rootPos.Y
+                    local angle = math.atan2(dy, dx)
+                    local length = math.sqrt(dx*dx + dy*dy)
+                    
+                    obj.lookArrow.Visible = true
+                    obj.lookArrow.Size = UDim2.new(0, length, 0, 2)
+                    obj.lookArrow.Position = UDim2.new(0, rootPos.X, 0, rootPos.Y - 1)
+                    obj.lookArrow.Rotation = math.deg(angle)
+                    obj.lookArrow.BackgroundColor3 = teamColor
+                    
+                    obj.lookArrowTip.Visible = true
+                    obj.lookArrowTip.Position = UDim2.new(0, endPos2D.X - 4, 0, endPos2D.Y - 4)
+                    obj.lookArrowTip.BackgroundColor3 = teamColor
+                    obj.lookArrowTip.Rotation = math.deg(angle)
+                else
+                    if obj.lookArrow then obj.lookArrow.Visible = false end
+                    if obj.lookArrowTip then obj.lookArrowTip.Visible = false end
+                end
+            end
+        else
+            if obj.lookArrow then
+                obj.lookArrow.Visible = false
+                obj.lookArrow:Destroy()
+                obj.lookArrow = nil
+            end
+            if obj.lookArrowTip then
+                obj.lookArrowTip.Visible = false
+                obj.lookArrowTip:Destroy()
+                obj.lookArrowTip = nil
+            end
+            obj.arrowCreated = false
+        end
+    end
+end
+
+game:GetService("RunService").RenderStepped:Connect(UpdateESP)
+
+game.Players.PlayerRemoving:Connect(function(plr)
+    if espObjects[plr.Name] then RemoveESPObjects(plr.Name) end
+end)
+
+for _, plr in ipairs(game.Players:GetPlayers()) do
+    if plr ~= player then
+        plr.CharacterAdded:Connect(function()
+            task.wait(0.3)
+            if espObjects[plr.Name] then
+                RemoveESPObjects(plr.Name)
+                CreateESPObjects(plr)
+            end
+        end)
+    end
+end
+
+player.CharacterAdded:Connect(function()
+    task.wait(0.3)
+    ClearESP()
+end)
+
+-- ============================================================
+-- ===== ФУНКЦИЯ ПРОВЕРКИ ВИДИМОСТИ =====
+-- ============================================================
+local function isPartVisible(part)
+    if not part then return false end
+    local origin = camera.CFrame.Position
+    local targetPos = part.Position
+    if part:IsDescendantOf(player.Character) then return false end
+    local direction = (targetPos - origin).unit
+    local distance = (targetPos - origin).magnitude
+    local ray = Ray.new(origin, direction * distance)
+    local hit = workspace:FindPartOnRayWithIgnoreList(ray, {player.Character, part.Parent})
+    if not hit then return true end
+    if hit:IsDescendantOf(part.Parent) then return true end
+    return false
+end
+
+-- ============================================================
+-- ===== ФУНКЦИИ АИМБОТА =====
+-- ============================================================
+local function isWhitelisted(plr)
+    if not settings.whitelist then return false end
+    for _, name in ipairs(settings.whitelist) do
+        if name == plr.Name then return true end
+    end
+    return false
+end
+
+local function getTargetClosestToCenter()
+    local viewport = camera.ViewportSize
+    local cx, cy = viewport.X / 2, viewport.Y / 2
+    local origin = camera.CFrame.Position
+    local best, bestDist = nil, math.huge
+    local myHead = player.Character and player.Character:FindFirstChild("Head")
+    local myTeam = player.Team
+
+    for _, v in ipairs(game.Players:GetPlayers()) do
+        if v == player or not v.Character then continue end
+        if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
+        if isWhitelisted(v) then continue end  -- <-- Вайтлист
+
+        local hum = v.Character:FindFirstChild("Humanoid")
+        if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then continue end
+
+        local part = v.Character:FindFirstChild(settings.aimPart)
+        if not part then
+            part = v.Character:FindFirstChild("Head") or v.Character:FindFirstChild("HumanoidRootPart")
+        end
+        if not part then continue end
+        if myHead and part == myHead then continue end
+        if part:IsDescendantOf(player.Character) then continue end
+
+        local pos, onScreen = camera:WorldToViewportPoint(part.Position)
+        if not onScreen then continue end
+
+        local dist = (part.Position - origin).magnitude
+        if dist > settings.maxDistance then continue end
+
+        if settings.visibleCheck then
+            if not isPartVisible(part) then
+                continue
+            end
+        end
+
+        local dx, dy = pos.X - cx, pos.Y - cy
+        local dCenter = math.sqrt(dx * dx + dy * dy)
+        if dCenter < settings.fov and dCenter < bestDist then
+            bestDist = dCenter
+            best = v
+        end
+    end
+    return best
+end
+
+local function lockTarget(target)
+    if not target or not target.Character then return end
+    
+    local part = target.Character:FindFirstChild(settings.aimPart)
+    if not part then
+        part = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+    end
+    if not part then return end
+    
+    -- Проверка дистанции (открепление)
+    local origin = camera.CFrame.Position
+    local dist = (part.Position - origin).magnitude
+    if dist > settings.maxDistance then
+        lockedTarget = nil
+        findTarget()
+        return
+    end
+    
+    if settings.visibleCheck then
+        if not isPartVisible(part) then
+            lockedTarget = nil
+            findTarget()
+            return
+        end
+    end
+    
+    local camPos = camera.CFrame.Position
+    local targetCF = CFrame.lookAt(camPos, part.Position)
+    camera.CFrame = camera.CFrame:Lerp(targetCF, settings.resistance)
+end
+
+local function findTarget()
+    if not aimbotEnabled then return end
+    local t = getTargetClosestToCenter()
+    lockedTarget = t or nil
+end
+
+-- ============================================================
+-- ===== GUI =====
+-- ============================================================
+MainTab:CreateSection({ name = "Aimbot" })
+
+local aimbotToggle = MainTab:CreateToggle({
+    name = "Включить аимбот",
+    current = false,
+    callback = function(v)
+        aimbotEnabled = v
+        if v then
+            CreateFOVCircle()
+            findTarget()
+        else
+            DestroyFOVCircle()
+            lockedTarget = nil
+        end
+        UpdateAimButton()
+    end
+})
+
+MainTab.toggles = { AimbotToggle = aimbotToggle }
+
+MainTab:CreateSection({ name = "Настройки" })
+
+MainTab:CreateSlider({
+    name = "Круг FOV (радиус)",
+    range = {20, 500},
+    increment = 1,
+    suffix = " px",
+    current = settings.fov,
+    callback = function(v)
+        settings.fov = v
+        saveSettings(settings)
+        UpdateFOVCircle(v)
+    end
+})
+
+MainTab:CreateSlider({
+    name = "Дистанция",
+    range = {50, 800},
+    increment = 10,
+    suffix = " studs",
+    current = settings.maxDistance,
+    callback = function(v)
+        settings.maxDistance = v
+        saveSettings(settings)
+    end
+})
+
+MainTab:CreateDropdown({
+    name = "Часть тела",
+    options = {"Head", "HumanoidRootPart", "Torso"},
+    current = settings.aimPart,
+    callback = function(v)
+        settings.aimPart = v
+        saveSettings(settings)
+    end
+})
+
+MainTab:CreateToggle({
+    name = "Проверка стен",
+    current = settings.visibleCheck,
+    callback = function(v)
+        settings.visibleCheck = v
+        saveSettings(settings)
+    end
+})
+
+MainTab:CreateToggle({
+    name = "Игнорировать союзников",
+    current = settings.ignoreTeam,
+    callback = function(v)
+        settings.ignoreTeam = v
+        saveSettings(settings)
+    end
+})
+
+MainTab:CreateSlider({
+    name = "Сила притяжения",
+    range = {0.5, 0.98},
+    increment = 0.01,
+    suffix = "",
+    current = settings.resistance,
+    callback = function(v)
+        settings.resistance = v
+        saveSettings(settings)
+    end
+})
+
+-- ============================================================
+-- ===== ВКЛАДКА VISUALS =====
+-- ============================================================
+VisualsTab:CreateSection({ name = "Настройки" })
+
+VisualsTab:CreateToggle({
+    name = "ESP",
+    current = settings.espEnabled,
+    callback = function(v)
+        settings.espEnabled = v
+        _G.ESP.Enabled = v
+        saveSettings(settings)
+        if not v then ClearESP() end
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Name",
+    current = settings.showName,
+    callback = function(v)
+        settings.showName = v
+        _G.ESP.ShowName = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Distance",
+    current = settings.showDistance,
+    callback = function(v)
+        settings.showDistance = v
+        _G.ESP.ShowDistance = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Team",
+    current = settings.showTeam,
+    callback = function(v)
+        settings.showTeam = v
+        _G.ESP.ShowTeam = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Highlight",
+    current = settings.showHighlight,
+    callback = function(v)
+        settings.showHighlight = v
+        _G.ESP.ShowHighlight = v
+        saveSettings(settings)
+    end
+})
+
+VisualsTab:CreateToggle({
+    name = "Look Direction",
+    current = settings.showLookDirection,
+    callback = function(v)
+        settings.showLookDirection = v
+        _G.ESP.ShowLookDirection = v
+        saveSettings(settings)
+    end
+})
+
+-- ============================================================
+-- ===== ВАЙТЛИСТ (Dropdown) =====
+-- ============================================================
+local whitelistDropdown = nil
+local selectedWhitelistPlayer = nil
+
+local function updateWhitelistDropdown()
+    if not whitelistDropdown then return end
+    local players = {}
+    for _, plr in ipairs(game.Players:GetPlayers()) do
+        if plr ~= player then
+            table.insert(players, plr.Name)
+        end
+    end
+    if #players == 0 then table.insert(players, "Нет игроков") end
+    whitelistDropdown:SetOptions(players)
+end
+
+WhitelistTab:CreateSection({ name = "Вайтлист (игнорирование)" })
+
+WhitelistTab:CreateParagraph({
+    name = "Информация",
+    text = "Игроки в вайтлисте не будут аимиться. Выбери игрока из списка и нажми кнопку."
+})
+
+whitelistDropdown = WhitelistTab:CreateDropdown({
+    name = "Игроки",
+    options = {"Нет игроков"},
+    current = "Нет игроков",
+    callback = function(v)
+        selectedWhitelistPlayer = v
+    end
+})
+
+WhitelistTab:CreateButton({
+    name = "➕ Добавить в вайтлист",
+    callback = function()
+        if not selectedWhitelistPlayer or selectedWhitelistPlayer == "Нет игроков" then
+            Rayfield:Notify({
+                Title = "Ошибка",
+                Content = "Сначала выбери игрока из списка",
+                Duration = 2
+            })
+            return
+        end
+        
+        if not settings.whitelist then settings.whitelist = {} end
+        for _, name in ipairs(settings.whitelist) do
+            if name == selectedWhitelistPlayer then
+                Rayfield:Notify({
+                    Title = "Уже в списке",
+                    Content = selectedWhitelistPlayer .. " уже в вайтлисте",
+                    Duration = 2
+                })
+                return
+            end
+        end
+        
+        table.insert(settings.whitelist, selectedWhitelistPlayer)
+        saveSettings(settings)
+        
+        Rayfield:Notify({
+            Title = "Добавлен",
+            Content = selectedWhitelistPlayer .. " добавлен в вайтлист",
+            Duration = 2
+        })
+    end
+})
+
+WhitelistTab:CreateButton({
+    name = "➖ Удалить из вайтлиста",
+    callback = function()
+        if not selectedWhitelistPlayer or selectedWhitelistPlayer == "Нет игроков" then
+            Rayfield:Notify({
+                Title = "Ошибка",
+                Content = "Сначала выбери игрока из списка",
+                Duration = 2
+            })
+            return
+        end
+        
+        if not settings.whitelist then settings.whitelist = {} end
+        local found = false
+        for i, name in ipairs(settings.whitelist) do
+            if name == selectedWhitelistPlayer then
+                table.remove(settings.whitelist, i)
+                found = true
+                break
+            end
+        end
+        
+        if not found then
+            Rayfield:Notify({
+                Title = "Не найден",
+                Content = selectedWhitelistPlayer .. " не в вайтлисте",
+                Duration = 2
+            })
+            return
+        end
+        
+        saveSettings(settings)
+        
+        Rayfield:Notify({
+            Title = "Удалён",
+            Content = selectedWhitelistPlayer .. " удалён из вайтлиста",
+            Duration = 2
+        })
+    end
+})
+
+WhitelistTab:CreateButton({
+    name = "📋 Показать вайтлист",
+    callback = function()
+        if not settings.whitelist or #settings.whitelist == 0 then
+            Rayfield:Notify({
+                Title = "Вайтлист пуст",
+                Content = "В вайтлисте нет игроков",
+                Duration = 2
+            })
+            return
+        end
+        
+        local text = table.concat(settings.whitelist, ", ")
+        Rayfield:Notify({
+            Title = "Вайтлист (" .. #settings.whitelist .. ")",
+            Content = text,
+            Duration = 4
+        })
+    end
+})
+
+WhitelistTab:CreateButton({
+    name = "🔄 Обновить список игроков",
+    callback = function()
+        updateWhitelistDropdown()
+        Rayfield:Notify({
+            Title = "Обновлено",
+            Content = "Список игроков обновлён",
+            Duration = 1.5
+        })
+    end
+})
+
+game.Players.PlayerAdded:Connect(updateWhitelistDropdown)
+game.Players.PlayerRemoving:Connect(updateWhitelistDropdown)
+
+-- ============================================================
+-- ===== ЗАПУСК =====
+-- ============================================================
+CreateFloatingButton()
+task.wait(2)
+updateWhitelistDropdown()
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if not aimbotEnabled then return end
+    if not lockedTarget or not lockedTarget.Character then
+        findTarget()
+        return
+    end
+    
+    local part = lockedTarget.Character:FindFirstChild(settings.aimPart)
+    if not part then
+        part = lockedTarget.Character:FindFirstChild("Head") or lockedTarget.Character:FindFirstChild("HumanoidRootPart")
+    end
+    if not part then
+        findTarget()
+        return
+    end
+    
+    lockTarget(lockedTarget)
+end)
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    if aimbotEnabled and not lockedTarget then findTarget() end
+end)
+
+player.CharacterAdded:Connect(function()
+    wait(1)
+    aimbotEnabled = false
+    lockedTarget = nil
+    DestroyFOVCircle()
+    UpdateAimButton()
+end)
+
+Rayfield:Notify({
+    Title = "Ryzen System",
+    Content = "Аимбот + Visuals + Вайтлист загружены",
+    Duration = 3
+})
