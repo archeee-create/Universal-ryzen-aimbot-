@@ -1,4 +1,4 @@
--- Ryzen Aimbot v17.0 [Rayfield Gen2] + КНОПКА AIM + VISUALS + ИГНОР ДРУЗЕЙ (БЕЗ СОХРАНЕНИЙ)
+-- Ryzen Aimbot v17.0 [Rayfield Gen2] + КНОПКА AIM + VISUALS
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 -- ===== МЕНЮ =====
@@ -15,7 +15,7 @@ local camera = workspace.CurrentCamera
 local aimbotEnabled = false
 local lockedTarget = nil
 
--- ===== НАСТРОЙКИ (БЕЗ СОХРАНЕНИЙ) =====
+-- ===== НАСТРОЙКИ =====
 local settings = {
     fov = 20,
     maxDistance = 50,
@@ -54,11 +54,6 @@ end
 local function ToggleAimbot()
     aimbotEnabled = not aimbotEnabled
     UpdateAimButton()
-    
-    if MainTab and MainTab.toggles and MainTab.toggles.AimbotToggle then
-        MainTab.toggles.AimbotToggle:Set(aimbotEnabled)
-    end
-    
     if aimbotEnabled then
         CreateFOVCircle()
         findTarget()
@@ -80,7 +75,6 @@ end
 
 local function CreateFloatingButton()
     if floatingGui then return end
-
     floatingGui = Instance.new("ScreenGui")
     floatingGui.Name = "AimbotButton"
     floatingGui.ResetOnSpawn = false
@@ -205,7 +199,7 @@ local function UpdateFOVCircle(newSize)
 end
 
 -- ============================================================
--- ===== ESP (_G.ESP) =====
+-- ===== ESP =====
 -- ============================================================
 _G.ESP = {
     Enabled = false,
@@ -525,12 +519,12 @@ local function getTargetClosestToCenter()
     local best, bestDist = nil, math.huge
     local myHead = player.Character and player.Character:FindFirstChild("Head")
     local myTeam = player.Team
-    local myFriends = player.Friends
 
     for _, v in ipairs(game.Players:GetPlayers()) do
         if v == player or not v.Character then continue end
         if settings.ignoreTeam and myTeam and v.Team == myTeam then continue end
-        if settings.ignoreFriends and myFriends and v:IsFriendsWith(player.UserId) then continue end
+        
+        if settings.ignoreFriends and v:IsFriendsWith(player.UserId) then continue end
 
         local hum = v.Character:FindFirstChild("Humanoid")
         if not hum or hum.Health <= 0 or hum:GetState() == Enum.HumanoidStateType.Dead then continue end
@@ -550,9 +544,7 @@ local function getTargetClosestToCenter()
         if dist > settings.maxDistance then continue end
 
         if settings.visibleCheck then
-            if not isPartVisible(part) then
-                continue
-            end
+            if not isPartVisible(part) then continue end
         end
 
         local dx, dy = pos.X - cx, pos.Y - cy
@@ -686,7 +678,7 @@ MainTab:CreateSlider({
 })
 
 -- ============================================================
--- ===== ВКЛАДКА VISUALS =====
+-- ===== VISUALS =====
 -- ============================================================
 VisualsTab:CreateSection({ name = "Настройки" })
 
